@@ -1,0 +1,132 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+// ENUM (ROLES)
+//  ROLE THAT CAN be in an organization . like it can has owner than admin which can add members , manager and client 
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MANAGER
+  MEMBER
+  CLIENT
+}
+
+model User {
+  id          String   @id @default(uuid())
+  username    String   @unique
+  email       String   @unique
+  password    String
+  createdAt   DateTime @default(now())
+  isVerified  Boolean      @default(false)   // 👈 whether email is verified
+  otpCode     String?                         // 👈 store OTP temporarily
+  otpExpiry   DateTime?                       // 👈 when OTP will expire
+  isSuperAdmin Boolean  @default(false)  // <--- platform-level admin
+  projects    Project[]
+  memberships OrganizationMembership[]
+  invitations Invitation[]
+}
+
+model Organization {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  createdAt   DateTime @default(now())
+
+  projects    Project[] // one organization can have many projects
+  memberships OrganizationMembership[]
+  invitations Invitation[]
+
+}
+
+model OrganizationMembership {
+  id              String   @id @default(uuid())
+  role            OrgRole  @default(OWNER)
+
+  userId          String
+  organizationId  String
+
+  user            User         @relation(fields: [userId], references: [id])
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  @@unique([userId, organizationId]) // prevent duplicate memberships(composite key)
+}
+// invitaion link for the clients , member , manger , admin .of organization
+
+model Invitation {
+  id             String   @id @default(uuid())
+  email          String
+  role           OrgRole
+  token          String   @unique
+  status         String   @default("PENDING") // PENDING | ACCEPTED | EXPIRED
+  createdAt      DateTime @default(now())
+  expiresAt      DateTime
+
+  // relations
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+
+  createdBy      User       @relation(fields: [createdById], references: [id])
+  createdById    String
+}
+
+// project model
+
+// 
+model Project {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  deadline       DateTime?
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  createdBy      User     @relation(fields: [createdById], references: [id])
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+
+// model OrganizationInvite {
+//   id              String   @id @default(uuid())
+//   email           String
+//   role            OrgRole
+//   token           String   @unique
+//   expiresAt       DateTime
+//   isUsed          Boolean  @default(false)
+//   invitedBy       String   // User ID who sent the invite
+//   organizationId  String
+  
+//   createdAt       DateTime @default(now())
+  
+//   organization    Organization @relation(fields: [organizationId], references: [id])
+//   inviter         User         @relation(fields: [invitedBy], references: [id])
+// }
+
+
+// model Project {
+//   id          String @id @default(uuid())
+//   org         Organization @relation(fields: [orgId], references: [id])
+//   orgId       String
+//   client      Client? @relation(fields: [clientId], references: [id])
+//   clientId    String?
+//   name        String
+//   description String?
+//   status      String @default("ACTIVE")
+//   startDate   DateTime?
+//   dueDate     DateTime?
+//   createdBy   String
+//   createdAt   DateTime @default(now())
+  
+// }
