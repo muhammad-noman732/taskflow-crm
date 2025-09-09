@@ -9,6 +9,8 @@ import dotenv from 'dotenv';
 import authRoutes from '@/routes/authRoutes';
 import invitationRoutes from '@/routes/invitationRoutes';
 import projectRouter from './routes/projectRoutes';
+import clientRoutes from './routes/clientRoutes';
+import taskRoutes from './routes/taskRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -68,6 +70,8 @@ app.get('/', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/invitations', invitationRoutes);
 app.use('/api/projects', projectRouter);
+app.use('/api/clients', clientRoutes);
+app.use('/api/tasks', taskRoutes);
 
 
 // Error handling middleware

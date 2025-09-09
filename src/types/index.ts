@@ -28,7 +28,7 @@ export interface JwtPayload {
   userId: string;
   email: string;
   username: string;
-  organizationId: string
+  organizationId: string;
   role?: string; // Optional since user might have multiple roles
   iat: number;
   exp: number;

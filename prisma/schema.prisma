@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,9 +7,119 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id            String                   @id @default(uuid())
+  username      String                   @unique
+  email         String                   @unique
+  password      String
+  createdAt     DateTime                 @default(now())
+  isVerified    Boolean                  @default(false)
+  otpCode       String?
+  otpExpiry     DateTime?
+  isSuperAdmin  Boolean                  @default(false)
+  invitations   Invitation[]
+  memberships   OrganizationMembership[]
+  clients       Client[]                 // For INVITED clients
+}
 
-// ENUM (ROLES)
-//  ROLE THAT CAN be in an organization . like it can has owner than admin which can add members , manager and client 
+model Organization {
+  id          String                   @id @default(uuid())
+  name        String                   @unique
+  createdAt   DateTime                 @default(now())
+  Client      Client[]
+  invitations Invitation[]
+  memberships OrganizationMembership[]
+}
+
+model OrganizationMembership {
+  id             String       @id @default(uuid())
+  role           OrgRole      @default(OWNER)
+  userId         String
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
+  projects       Project[]
+
+  // here will be better than user as here member and organization are at one place 
+ assignedTasks Task[]          @relation("TaskAssignees")
+ createdTasks Task[]     @relation("TaskCreator")
+  @@unique([userId, organizationId])
+}
+
+model Invitation {
+  id             String       @id @default(uuid())
+  email          String
+  role           OrgRole
+  token          String       @unique
+  status         String       @default("PENDING")
+  createdAt      DateTime     @default(now())
+  expiresAt      DateTime
+  organizationId String
+  createdById    String
+  createdBy      User         @relation(fields: [createdById], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([email, organizationId])
+}
+
+model Project {
+  id           String                 @id @default(uuid())
+  name         String
+  description  String?
+  createdAt    DateTime               @default(now())
+  deadline     DateTime?
+  updatedAt    DateTime               @updatedAt
+
+  clientId     String?
+  membershipId String
+  client       Client?                @relation(fields: [clientId], references: [id])
+  membership   OrganizationMembership @relation(fields: [membershipId], references: [id])
+  tasks        Task[]
+}
+
+
+enum ClientType {
+  CRM      // Business entity only
+  INVITED  // Has login access
+}
+
+model Client {
+  id             String       @id @default(uuid())
+  name           String
+  email          String?      // Make email optional for INVITED clients
+  company        String?
+  status         String       @default("ACTIVE")
+  notes          String?
+  
+  // New fields for client types
+  type           ClientType   @default(CRM)
+  userId         String?      // Link to User if invited
+  user           User?        @relation(fields: [userId], references: [id])
+  
+  // Existing fields
+  organizationId String
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+  projects       Project[]
+  createdAt      DateTime     @default(now())
+}
+
+model Task {
+  id           String     @id @default(uuid())
+  title        String
+  description  String?
+  status       TaskStatus @default(TODO)
+  deadline     DateTime?
+  projectId    String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  project      Project    @relation(fields: [projectId], references: [id])
+  
+    // Who created the task (using membership for consistency)
+  createdBy   String     // OrganizationMembership ID
+  creator     OrganizationMembership @relation("TaskCreator", fields: [createdBy], references: [id])
+  
+  assignees    OrganizationMembership[]     @relation("TaskAssignees")
+}
 
 enum OrgRole {
   OWNER
@@ -25,108 +129,9 @@ enum OrgRole {
   CLIENT
 }
 
-model User {
-  id          String   @id @default(uuid())
-  username    String   @unique
-  email       String   @unique
-  password    String
-  createdAt   DateTime @default(now())
-  isVerified  Boolean      @default(false)   // 👈 whether email is verified
-  otpCode     String?                         // 👈 store OTP temporarily
-  otpExpiry   DateTime?                       // 👈 when OTP will expire
-  isSuperAdmin Boolean  @default(false)  // <--- platform-level admin
-  projects    Project[]
-  memberships OrganizationMembership[]
-  invitations Invitation[]
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
 }
 
-model Organization {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  createdAt   DateTime @default(now())
-
-  projects    Project[] // one organization can have many projects
-  memberships OrganizationMembership[]
-  invitations Invitation[]
-
-}
-
-model OrganizationMembership {
-  id              String   @id @default(uuid())
-  role            OrgRole  @default(OWNER)
-
-  userId          String
-  organizationId  String
-
-  user            User         @relation(fields: [userId], references: [id])
-  organization    Organization @relation(fields: [organizationId], references: [id])
-  @@unique([userId, organizationId]) // prevent duplicate memberships(composite key)
-}
-// invitaion link for the clients , member , manger , admin .of organization
-
-model Invitation {
-  id             String   @id @default(uuid())
-  email          String
-  role           OrgRole
-  token          String   @unique
-  status         String   @default("PENDING") // PENDING | ACCEPTED | EXPIRED
-  createdAt      DateTime @default(now())
-  expiresAt      DateTime
-
-  // relations
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  organizationId String
-
-  createdBy      User       @relation(fields: [createdById], references: [id])
-  createdById    String
-}
-
-// project model
-
-// 
-model Project {
-  id             String   @id @default(cuid())
-  name           String
-  description    String?
-  deadline       DateTime?
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  organizationId String
-  createdBy      User     @relation(fields: [createdById], references: [id])
-  createdById    String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-}
-
-
-// model OrganizationInvite {
-//   id              String   @id @default(uuid())
-//   email           String
-//   role            OrgRole
-//   token           String   @unique
-//   expiresAt       DateTime
-//   isUsed          Boolean  @default(false)
-//   invitedBy       String   // User ID who sent the invite
-//   organizationId  String
-  
-//   createdAt       DateTime @default(now())
-  
-//   organization    Organization @relation(fields: [organizationId], references: [id])
-//   inviter         User         @relation(fields: [invitedBy], references: [id])
-// }
-
-
-// model Project {
-//   id          String @id @default(uuid())
-//   org         Organization @relation(fields: [orgId], references: [id])
-//   orgId       String
-//   client      Client? @relation(fields: [clientId], references: [id])
-//   clientId    String?
-//   name        String
-//   description String?
-//   status      String @default("ACTIVE")
-//   startDate   DateTime?
-//   dueDate     DateTime?
-//   createdBy   String
-//   createdAt   DateTime @default(now())
-  
-// }

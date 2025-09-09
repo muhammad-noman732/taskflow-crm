@@ -1,9 +1,10 @@
 import express from "express";
 import { inviteUser, acceptInvitation } from "@/controllers/invitationController";
 import { validateRequest } from "@/middleware/validation";
-import { authenticateToken } from "@/middleware/auth";
+import { authenticateToken, authorizeRole } from "@/middleware/auth";
 import { inviteUserSchema, acceptInvitationSchema } from "@/schemas";
 import { prisma } from "@/config/db";
+import { authorize } from "passport";
 
 const invitationRouter = express.Router();
 
@@ -36,7 +37,7 @@ invitationRouter.get("/", async (req, res) => {
 
 
 // POST /api/invitations/invite - Send invitation
-invitationRouter.post("/invite", authenticateToken, validateRequest(inviteUserSchema), inviteUser);
+invitationRouter.post("/invite", authenticateToken, authorizeRole ("OWNER"), validateRequest(inviteUserSchema), inviteUser);
 
 // POST /api/invitations/accept - Accept invitation
 invitationRouter.post("/accept", validateRequest(acceptInvitationSchema), acceptInvitation);

@@ -2,9 +2,12 @@ import { Request, Response } from "express";
 import { prisma } from "@/config/db";
 
 // POST /projects (create project inside org)
+// this project will belong to the client of the same oranization so he can view the project status
+
 export const createProject = async (req: Request, res: Response) => {
     try {
-        const { name, description, deadline } = req.body;
+        const { name, description, deadline, clientId } = req.body;
+        console.log("client id " , clientId);
         console.log("User from JWT:", req.user);
         console.log("Organization ID:", req.user?.organizationId);
 
@@ -19,7 +22,24 @@ export const createProject = async (req: Request, res: Response) => {
             });
         }
 
-        // Find the organization membership of user
+        // If clientId is provided, validate it belongs to same organization
+        if (clientId) {
+            const client = await prisma.client.findFirst({
+                where: {
+                    id: clientId,
+                    organizationId: currentOrgId // Same organization as membership
+                }
+            });
+
+            if (!client) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Client not found or doesn't belong to this organization"
+                });
+            }
+        }
+        
+        // Find the organization membership of user (before creating the project should be member of the org)
         const membership = await prisma.organizationMembership.findUnique({
             where: {
                 // user composite key here for uniqueness
@@ -30,6 +50,7 @@ export const createProject = async (req: Request, res: Response) => {
             },
         });
 
+
         if (!membership) {
             return res.status(403).json({
                 success: false,
@@ -37,32 +58,39 @@ export const createProject = async (req: Request, res: Response) => {
             });
         }
 
-        // Create project
+
+        // Create project linked to membership
         const project = await prisma.project.create({
             data: {
                 name,
                 description,
-                deadline: deadline ? new Date(deadline) : null,
-                organizationId: currentOrgId,
-                createdById: currentUserId,
+                deadline,
+                membershipId: membership.id, // Link to membership
+                clientId: clientId, 
             },
             include: {
-                organization: true,
-                createdBy: {
-                    select: {
-                        id: true,
-                        username: true,
-                        email: true,
-                    },
-                },
-            },
-        });
+                membership: {
+                    include: {
+                        organization: true,
+                        user: {
+                                select: {
+                                    username: true,
+                                    email: true,
+                                    isVerified: true
+                                }
+                            }
+
+                        }
+                    }
+                }
+    })
 
         return res.status(201).json({
             success: true,
             message: "Project created successfully",
             data: project,
         });
+
     } catch (error) {
         console.error("Create project error:", error);
         return res.status(500).json({
@@ -110,17 +138,10 @@ export const getAllProject = async (req: Request, res: Response) => {
         // get all the projects with organization( all of the user organization where he is) and createdBy details
         const allProjects = await prisma.project.findMany({
             where: {
-                organizationId: req.user?.organizationId
+                membershipId: membership.id
             },
             include: {
-                organization: true,
-                createdBy: {
-                    select: {
-                        id: true,
-                        username: true,
-                        email: true,
-                    },
-                },
+                membership: true,
             },
         });
 
@@ -187,17 +208,10 @@ export const getProjectById = async (req: Request, res: Response) => {
         const project = await prisma.project.findFirst({
             where: {
                 id: projectId,
-                organizationId: currentOrgId,
+                membershipId: membership.id,
             },
             include: {
-                organization: true,
-                createdBy: {
-                    select: {
-                        id: true,
-                        username: true,
-                        email: true,
-                    },
-                },
+                membership: true
             },
         });
 
@@ -270,14 +284,11 @@ export const updateProjectById = async (req: Request, res: Response) => {
         const updatedProject = await prisma.project.update({
             where: {
                 id: projectId,
-                organizationId: currentOrgId
+                membershipId: membership.id
             },
             data: updateData, // <-- pass the fields directly
             include: {
-                organization: true,
-                createdBy: {
-                    select: { id: true, username: true, email: true },
-                },
+                membership: true,
             },
         });
 
@@ -335,18 +346,11 @@ export const deleteProjectById = async (req: Request, res: Response) => {
         const deletedProject = await prisma.project.delete({
             where: {
                 id: projectId,
-                organizationId: currentOrgId
+                membershipId: membership.id
             },
             include: {
-                organization: true,
-                createdBy: {
-                    select: {
-                        id: true,
-                        username: true,
-                        email: true,
-                    },
-                },
-            },
+                membership: true,
+            }
         });
 
         return res.status(200).json({

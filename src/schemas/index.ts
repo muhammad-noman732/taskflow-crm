@@ -14,6 +14,7 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required')
 });
 
+
 export const verifyOtpSchema = z.object({
   email: z.string().email('Invalid email format'),
   otp: z.string().length(6, 'OTP must be 6 digits')
@@ -62,7 +63,26 @@ export const projectSchema = z.object({
   description :z.string()
     .min(10, "Description should be a minimum of 10 characters")
     .max(300, "Description should be at most 300 characters"),
-   deadline: z.string().datetime().optional()
+  deadline: z.string().datetime().optional(),
+  clientId: z.string().uuid("Invalid client ID format").optional()
+});
+
+// client schema
+export const clientSchema = z.object({
+  name: z.string().min(2, "Client name must be at least 2 characters"),
+  email: z.string().email("Invalid email format").optional(),
+  company: z.string().optional(),
+  type: z.enum(['CRM', 'INVITED']).default('CRM'),
+  userId: z.string().uuid().optional(),
+  notes: z.string().optional(),
+});
+
+// invited client schema (for linking existing CLIENT users)
+export const invitedClientSchema = z.object({
+  userId: z.string().uuid("Invalid user ID format"),
+  name: z.string().min(2, "Client name must be at least 2 characters").optional(),
+  company: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 
@@ -78,11 +98,10 @@ export const customerSchema = z.object({
 export const taskSchema = z.object({
   title: z.string().min(1, 'Task title is required'),
   description: z.string().optional(),
-  status: z.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']).default('PENDING'),
-  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).default('MEDIUM'),
-  dueDate: z.string().datetime().optional(),
-  assignedTo: z.string().uuid().optional(),
-  customerId: z.string().uuid().optional()
+  status: z.enum(['TODO', 'IN_PROGRESS', 'DONE']).default('TODO'),
+  deadline: z.string().datetime().optional(),
+  projectId: z.string().uuid('Invalid project ID format'),
+  assigneeMembershipIds: z.array(z.string().uuid('Invalid assignee ID format')).optional()
 });
 
 // Type inference from schemas
@@ -91,5 +110,6 @@ export type LoginRequest = z.infer<typeof loginSchema>;
 export type UpdateUser = z.infer<typeof updateUserSchema>;
 export type PaginationQuery = z.infer<typeof paginationSchema>;
 export type IdParam = z.infer<typeof idParamSchema>;
+export type Client = z.infer<typeof clientSchema>;
 export type Customer = z.infer<typeof customerSchema>;
 export type Task = z.infer<typeof taskSchema>;

@@ -3,6 +3,7 @@ import { sendEmail } from "@/services/emailService";
 import { Request, Response } from "express";
 import { randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
+import { createInvitedClient } from "./clientController";
 
 
 // invite user to organization. as admin . manager . member and client of the organization
@@ -36,6 +37,42 @@ export const inviteUser = async (req: Request, res: Response) => {
       return res.status(403).json({
         success: false,
         message: "You are not a member of this organization",
+      });
+    }
+
+    // Check if user is already a member of this organization
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+      include: {
+        memberships: {
+          where: { organizationId: currentOrgId }
+        }
+      }
+    });
+
+    if (existingUser && existingUser.memberships.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "User is already a member of this organization",
+      });
+    }
+
+    // Check if there's already a pending invitation for this email + organization
+    const existingInvitation = await prisma.invitation.findFirst({
+      where: {
+        email,
+        organizationId: currentOrgId,
+        status: "PENDING",
+        expiresAt: {
+        gt: new Date() // Not expired
+        }
+      }
+    });
+
+    if (existingInvitation) {
+      return res.status(400).json({
+        success: false,
+        message: "A pending invitation already exists for this email. Please wait for it to be accepted or expired.",
       });
     }
 
@@ -97,7 +134,7 @@ export const acceptInvitation = async(req: Request , res : Response)=>{
             where:{
                 token
             }
-        })
+         })
 
         
    if (!invitation) {
@@ -119,6 +156,7 @@ export const acceptInvitation = async(req: Request , res : Response)=>{
       where: { email: invitation.email },
     });
 
+    // create new user
     if (!user) {
       if (!username || !password) {
         return res.status(400).json({
@@ -127,13 +165,26 @@ export const acceptInvitation = async(req: Request , res : Response)=>{
         });
       }
       
+      // Check if username is already taken
+      const existingUserWithUsername = await prisma.user.findUnique({
+        where: { username }
+      });
+      
+      if (existingUserWithUsername) {
+        return res.status(400).json({
+          success: false,
+          message: "Username is already taken. Please choose a different username.",
+        });
+      }
+      
       const hashedPassword = await bcrypt.hash(password, 10);
-      // Create new user 
+      // Create new user (auto-verify since invitation was sent to verified email)
       user = await prisma.user.create({
         data: {
           email: invitation.email,
           username,
           password: hashedPassword,
+          isVerified: true, // Auto-verify invited users
         },
       });
     } else {
@@ -153,6 +204,14 @@ export const acceptInvitation = async(req: Request , res : Response)=>{
           message: "User is already a member of this organization",
         });
       }
+      
+      // If existing user is not verified, auto-verify them since invitation was sent to verified email
+      if (!user.isVerified) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { isVerified: true }
+        });
+      }
     }
     
        // 3. Add membership
@@ -164,17 +223,31 @@ export const acceptInvitation = async(req: Request , res : Response)=>{
       },
     });
 
-    
+
+            // 4. If role is CLIENT, create client record
+if (invitation.role === 'CLIENT') {
+  try {
+    await createInvitedClient(user.id, invitation.organizationId);
+  } catch (error) {
+    console.error('Failed to create invited client:', error);
+    // Don't fail the invitation, just log the error
+  }
+}
     // 4. Update invitation status
     await prisma.invitation.update({
       where: { id: invitation.id },
       data: { status: "ACCEPTED" },
     });
 
+
+
     return res.status(200).json({
       success: true,
       message: "Invitation accepted successfully. You can now log in.",
+      data: user
     });
+    // Note: Invitation status is updated to "ACCEPTED" above, 
+    // and user is auto-verified so they can login immediately 
   } catch (error) {
     console.error("Accept invite error:", error);
     return res.status(500).json({ success: false, message: "Something went wrong" });

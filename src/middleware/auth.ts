@@ -1,51 +1,78 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { JwtPayload } from '@/types';
+import { prisma } from '@/config/db';
 
+// Middleware: Authenticate
 export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
-  // Try to get token from cookie first, then from Authorization header as fallback
-  const token = req.cookies.authToken || (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
+  const token =
+    req.cookies.authToken ||
+    (req.headers['authorization'] && req.headers['authorization'].split(' ')[1]);
 
   if (!token) {
     return res.status(401).json({
       success: false,
       message: 'Access token required',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
-    req.user = decoded;
+    req.user = decoded; // attach decoded payload to req.user
     return next();
   } catch (error) {
     return res.status(403).json({
       success: false,
       message: 'Invalid or expired token',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   }
 };
 
-export const authorizeRoles = (...roles: string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required',
-        timestamp: new Date().toISOString()
-      });
-    }
+// Middleware: Authorize
+export const authorizeRole =
+  (...allowedRoles: string[]) =>
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user?.userId;
+      const orgId = req.user?.organizationId;
 
-    // Check if user has a role and if it's in the allowed roles
-    if (!req.user.role || !roles.includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: `Insufficient permissions. Required roles: ${roles.join(', ')}`,
-        timestamp: new Date().toISOString()
-      });
-    }
+      if (!userId || !orgId) {
+        res.status(401).json({
+          success: false,
+          message: 'Unauthorized: missing user or organization context',
+        });
+        return;
+      }
 
-    return next();
+      // Find membership
+      const membership = await prisma.organizationMembership.findUnique({
+        where: {
+          userId_organizationId: {
+            userId,
+            organizationId: orgId,
+          },
+        },
+      });
+
+      if (!membership || !allowedRoles.includes(membership.role)) {
+        res.status(403).json({
+          success: false,
+          message: 'Forbidden: insufficient role',
+        });
+        return;
+      }
+
+      return next();
+    } catch (error) {
+      console.error('Authorization error:', error);
+      // Ensure a return statement here to satisfy all code paths
+      res.status(500).json({
+            message: "something went wrong",
+            success: false,
+            error: error instanceof Error ? error.message : "Internal server error",
+        });
+      return;
+    }
   };
-};
