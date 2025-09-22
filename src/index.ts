@@ -11,6 +11,10 @@ import invitationRoutes from '@/routes/invitationRoutes';
 import projectRouter from './routes/projectRoutes';
 import clientRoutes from './routes/clientRoutes';
 import taskRoutes from './routes/taskRoutes';
+import projectMemberRoutes from './routes/projectMemberRoutes';
+import commentRouter from './routes/commentsRoutes';
+import labelRoutes from './routes/labelRoutes';
+import taskLabelRoutes from './routes/taskLabelRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -72,7 +76,10 @@ app.use('/api/invitations', invitationRoutes);
 app.use('/api/projects', projectRouter);
 app.use('/api/clients', clientRoutes);
 app.use('/api/tasks', taskRoutes);
-
+app.use('/api/project-members', projectMemberRoutes);
+app.use('/api/comments', commentRouter);
+app.use('/api/labels', labelRoutes);
+app.use('/api/task-labels', taskLabelRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {

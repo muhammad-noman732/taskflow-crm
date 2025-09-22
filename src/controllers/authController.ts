@@ -9,102 +9,127 @@ import { sendEmail } from "@/services/emailService";
 
 
 export const doSignup = async (req: Request, res: Response) => {
-  try {
+    try {
     // debugging
     console.log("Request body:", req.body);
     console.log("Organization name:", req.body.organizationName);
-    // 1️⃣ Validate input
+     //  Validate input
 
     const { username, email, password, organizationName } = req.body;
 
-    // Validation - check required fields
-    if (!username) {
-      return res.status(400).json({
-        success: false,
-        message: "Username is required",
-        timestamp: new Date().toISOString(),
-      });
-    }
+        // Validation - check required fields
+        if (!username) {
+            return res.status(400).json({
+                success: false,
+                message: "Username is required",
+               timestamp: new Date().toISOString(),
+            });
+        }
 
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: "Email is required",
-        timestamp: new Date().toISOString(),
-      });
-    }
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: "Email is required",
+                 timestamp: new Date().toISOString(),
+            });
+        }
 
-    if (!organizationName) {
-      return res.status(400).json({
-        success: false,
-        message: "Organization name is required",
-        timestamp: new Date().toISOString(),
-      });
-    }
+        if (!organizationName) {
+            return res.status(400).json({
+                success: false,
+                message: "Organization name is required",
+                  timestamp: new Date().toISOString(),
+            });
+        }
 
-    // Check if username already exists
-    const existingUser = await prisma.user.findUnique({
+        // Check if username already exists
+        const existingUser = await prisma.user.findUnique({
       where: { username: username },
-    });
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
+        });
+        if (existingUser) {
+            return res.status(409).json({
+                success: false,
         message: "Username already exists. Please choose another name",
         timestamp: new Date().toISOString(),
-      });
-    }
+            });
+        }
 
-    // Check if email already exists
-    const existingEmail = await prisma.user.findUnique({
+        // Check if email already exists
+        const existingEmail = await prisma.user.findUnique({
       where: { email: email },
-    });
-    if (existingEmail) {
-      return res.status(409).json({
-        success: false,
+        });
+        if (existingEmail) {
+            return res.status(409).json({
+                success: false,
         message: "Email already exists. Please choose another email",
         timestamp: new Date().toISOString(),
-      });
-    }
+            });
+        }
 
-    // Check if organization name already exists
-    const existingOrg = await prisma.organization.findUnique({
-      where: { name: organizationName },
-    });
-    if (existingOrg) {
-      return res.status(409).json({
-        success: false,
-        message: "Organization already exists. Please choose another name",
-        timestamp: new Date().toISOString(),
-      });
-    }
+        // Generate slug from organization name
+        const generateSlug = (name: string): string => {
+            return name
+                .toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+                .replace(/\s+/g, '-') // Replace spaces with hyphens
+                .replace(/-+/g, '-') // Replace multiple hyphens with single
+                .trim();
+        };
 
-    // Hash the password
-    const hashPassword = await bcrypt.hash(password, 10);
+        const orgSlug = generateSlug(organizationName);
+
+        // Check if organization name already exists
+        const existingOrg = await prisma.organization.findUnique({
+            where: { name: organizationName },
+        });
+        if (existingOrg) {
+            return res.status(409).json({
+                success: false,
+                message: "Organization already exists. Please choose another name",
+                timestamp: new Date().toISOString(),
+            });
+        }
+
+        // Check if organization slug already exists
+        const existingSlug = await prisma.organization.findUnique({
+            where: { slug: orgSlug },
+        });
+        if (existingSlug) {
+            return res.status(409).json({
+                success: false,
+                message: "Organization slug already exists. Please choose another name",
+                timestamp: new Date().toISOString(),
+            });
+        }
+
+        // Hash the password
+        const hashPassword = await bcrypt.hash(password, 10);
 
     
         // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit
     const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
-
+    
     //  Create User + Organization + Membership in one go
-    const user = await prisma.user.create({
-      data: {
-        username,
-        email,
-        password: hashPassword,
-        otpCode: otp,
-        otpExpiry,
-        memberships: {
-          create: {
-            role: "OWNER",
-            organization: {
-              create: {
-                name: organizationName,
-              },
-            },
-          },
-        },
-      },
+        const user = await prisma.user.create({
+             data: {
+                username,
+                email,
+                password: hashPassword,
+                otpCode: otp,
+                otpExpiry,
+                memberships: {
+                    create: {
+                        role: "OWNER",
+                        organization: {
+                        create: {
+                        name: organizationName,
+                        slug: orgSlug,
+                              },
+                        },
+                    },
+                },
+             },
       include: {
         memberships: {
           include: {
@@ -145,11 +170,11 @@ export const doSignup = async (req: Request, res: Response) => {
     // Remove sensitive data from response
     const { password: _, otpCode: __, otpExpiry: ___, ...userWithoutSensitiveData } = user;
 
-    return res.status(201).json({
-      success: true,
-      message: "User created successfully, please verify OTP to complete signup",
-      data: userWithoutSensitiveData,
-      timestamp: new Date().toISOString(),
+        return res.status(201).json({
+            success: true,
+            message: "User created successfully, please verify OTP to complete signup",
+            data: userWithoutSensitiveData,
+             timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error("Signup error:", error);
@@ -373,15 +398,15 @@ export const doLogout = async (req: Request, res: Response) => {
     return res.status(200).json({
       success: true,
       message: "Logout successful",
-      timestamp: new Date().toISOString()
-    });
+            timestamp: new Date().toISOString()
+        });
 
-  } catch (error) {
+    } catch (error) {
     console.error('Logout error:', error);
-    return res.status(500).json({
-      success: false,
+        return res.status(500).json({
+            success: false,
       message: "Internal server error during logout",
-      timestamp: new Date().toISOString()
-    });
-  }
+            timestamp: new Date().toISOString()
+        });
+    }
 };

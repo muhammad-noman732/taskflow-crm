@@ -1,0 +1,71 @@
+// New API endpoints structure
+const newEndpoints = {
+  // Comments
+  'POST /api/comments': 'Create comment',
+  'GET /api/comments/task/:taskId': 'Get task comments',
+  'GET /api/comments/project/:projectId': 'Get project comments',
+  'PUT /api/comments/:id': 'Update comment',
+  'DELETE /api/comments/:id': 'Delete comment',
+  
+  // Attachments
+  'POST /api/attachments/upload': 'Upload file',
+  'GET /api/attachments/task/:taskId': 'Get task attachments',
+  'GET /api/attachments/project/:projectId': 'Get project attachments',
+  'DELETE /api/attachments/:id': 'Delete attachment',
+  
+  // Labels
+  'POST /api/labels': 'Create label',
+  'GET /api/labels': 'Get organization labels',
+  'PUT /api/labels/:id': 'Update label',
+  'DELETE /api/labels/:id': 'Delete label',
+  'POST /api/tasks/:taskId/labels': 'Add label to task',
+  'DELETE /api/tasks/:taskId/labels/:labelId': 'Remove label from task',
+  
+  // Milestones
+  'POST /api/milestones': 'Create milestone',
+  'GET /api/milestones/project/:projectId': 'Get project milestones',
+  'PUT /api/milestones/:id': 'Update milestone',
+  'DELETE /api/milestones/:id': 'Delete milestone',
+  
+  // Subtasks
+  'POST /api/subtasks': 'Create subtask',
+  'GET /api/subtasks/task/:taskId': 'Get task subtasks',
+  'PUT /api/subtasks/:id': 'Update subtask',
+  'DELETE /api/subtasks/:id': 'Delete subtask',
+  
+  // Time Tracking
+  'POST /api/time-entries/start': 'Start time tracking',
+  'POST /api/time-entries/stop': 'Stop time tracking',
+  'GET /api/time-entries/task/:taskId': 'Get task time entries',
+  'POST /api/time-entries': 'Create manual time entry',
+  'PUT /api/time-entries/:id': 'Update time entry',
+  'DELETE /api/time-entries/:id': 'Delete time entry',
+  
+  // Messaging
+  'POST /api/channels': 'Create channel',
+  'GET /api/channels/project/:projectId': 'Get project channels',
+  'POST /api/messages': 'Send message',
+  'GET /api/messages/channel/:channelId': 'Get channel messages',
+  
+  // Notifications
+  'GET /api/notifications': 'Get user notifications',
+  'PUT /api/notifications/:id/read': 'Mark notification as read',
+  'PUT /api/notifications/read-all': 'Mark all notifications as read',
+  
+  // Invoicing
+  'POST /api/invoices': 'Create invoice',
+  'GET /api/invoices': 'Get organization invoices',
+  'PUT /api/invoices/:id': 'Update invoice',
+  'POST /api/invoices/:id/send': 'Send invoice',
+  'POST /api/payments': 'Record payment',
+  
+  // Contacts
+  'POST /api/contacts': 'Create contact',
+  'GET /api/contacts/client/:clientId': 'Get client contacts',
+  'PUT /api/contacts/:id': 'Update contact',
+  'DELETE /api/contacts/:id': 'Delete contact',
+  
+  // Audit Logs
+  'GET /api/audit-logs': 'Get audit logs',
+  'GET /api/audit-logs/resource/:type/:id': 'Get resource audit logs'
+};

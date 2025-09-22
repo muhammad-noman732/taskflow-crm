@@ -14,15 +14,15 @@ export const createClient = async (req: Request, res: Response) => {
       });
     }
 
-    // ✅ Only OWNER/ADMIN/MANAGER can create clients
-    const membership = await prisma.organizationMembership.findUnique({
-      where: {
-        userId_organizationId: {
+    // Only OWNER/ADMIN/MANAGER can create clients
+        const membership = await prisma.organizationMembership.findUnique({
+            where: {
+                userId_organizationId: {
           userId: req.user?.userId!,
           organizationId,
-        },
-      },
-    });
+                },
+            },
+        });
 
     if (!membership || !["OWNER", "ADMIN", "MANAGER"].includes(membership.role)) {
       return res.status(403).json({
@@ -31,7 +31,7 @@ export const createClient = async (req: Request, res: Response) => {
       });
     }
 
-    // 🚨 If someone tries to create an INVITED client manually, block it
+    //  If someone tries to create an INVITED client manually, block it
     if (type === "INVITED") {
       return res.status(400).json({
         success: false,
@@ -64,7 +64,7 @@ export const createClient = async (req: Request, res: Response) => {
       console.log("No email provided, skipping duplicate check");
     }
 
-    // ✅ Create CRM client
+    // Create CRM client
     const client = await prisma.client.create({
       data: {
         name,
@@ -75,7 +75,7 @@ export const createClient = async (req: Request, res: Response) => {
         organizationId,
       },
       include: {
-        Organization: true,
+        organization: true,
         user: {
           select: { id: true, username: true, email: true },
         },
@@ -106,7 +106,11 @@ export const createInvitedClient = async (
   userId: string,
   organizationId: string
 ) => {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.user.findUnique({ 
+            where:{ 
+              id: userId 
+            }
+           });
   if (!user) throw new Error("User not found for invited client");
 
   // Check if client already exists for this user/org
@@ -145,8 +149,8 @@ export const getAllClients = async (req: Request, res: Response) => {
         const membership = await prisma.organizationMembership.findUnique({
             where: {
                 userId_organizationId: {
-             userId: req.user?.userId!,
-             organizationId: currentOrgId ,
+                      userId: req.user?.userId!,
+                       organizationId: currentOrgId ,
                 },
             },
         });
@@ -163,7 +167,7 @@ export const getAllClients = async (req: Request, res: Response) => {
             organizationId: currentOrgId 
         },
         include:{
-          Organization:true,
+          organization:true,
           user:{
             select:{
               username:true,
@@ -224,7 +228,7 @@ export const getClientById = async (req: Request, res: Response) => {
             id: clientId
         },
          include:{
-          Organization:true,
+          organization:true,
           user:{
             select:{
               username:true,
@@ -243,7 +247,7 @@ export const getClientById = async (req: Request, res: Response) => {
       });
     }
 
-       return res.status(200).json({
+        return res.status(200).json({
       success: true,
       message: "Client retrieved successfully",
       data: client
@@ -317,7 +321,7 @@ export const updateClient = async (req: Request, res: Response) => {
       where: { id: clientId },
       data: updateData,
        include:{
-          Organization:true,
+          organization:true,
           user:{
             select:{
               username:true,
@@ -334,7 +338,7 @@ export const updateClient = async (req: Request, res: Response) => {
       message: "Client updated successfully",
       data: clientInfo
     });
-  } catch (error) {
+     } catch (error) {
     console.error("Update client error:", error);
     return res.status(500).json({
       success: false,
@@ -382,7 +386,7 @@ export const deleteClient = async (req: Request, res: Response) => {
         organizationId: currentOrgId,
       },
       include:{
-          Organization:true,
+          organization:true,
           user:{
             select:{
               username:true,

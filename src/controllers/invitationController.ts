@@ -106,7 +106,7 @@ export const inviteUser = async (req: Request, res: Response) => {
     // Send email
     await sendEmail(
       email,
-      "You're invited to join an organization",
+      "You're invited to join an organization on Taskflow CRM !",
       `<p>You have been invited as <b>${role}</b> to join <b>${org.name}</b>.
        Click <a href="${inviteLink}">here</a> to accept.</p>`
     );
