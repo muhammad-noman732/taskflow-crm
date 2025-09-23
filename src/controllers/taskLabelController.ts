@@ -7,7 +7,7 @@ export const addLabelToTask = async (req: Request, res: Response) => {
         const { taskId, labelId } = req.body;
         const userId = req.user?.userId;
         const organizationId = req.user?.organizationId;
-
+      
         if (!userId || !organizationId) {
             return res.status(401).json({
                 success: false,
@@ -64,8 +64,8 @@ export const addLabelToTask = async (req: Request, res: Response) => {
             where: {
                 id: taskId,
                 project: {
-                    orgId: organizationId
-                }
+                orgId: organizationId
+            }
             }
         });
 
@@ -136,7 +136,7 @@ export const addLabelToTask = async (req: Request, res: Response) => {
     }
 };
 
-// removeLabelFromTask()      // Remove label from task
+// removeLabelFromTask()  // Remove label from task
 export const removeLabelFromTask = async (req: Request, res: Response) => {
     try {
         const { taskId, labelId } = req.params;

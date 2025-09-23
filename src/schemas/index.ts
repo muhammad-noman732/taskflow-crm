@@ -196,5 +196,39 @@ export type BulkTaskLabelRequest = z.infer<typeof bulkTaskLabelSchema>;
 export type TaskLabelParams = z.infer<typeof taskLabelParamsSchema>;
 export type TaskParams = z.infer<typeof taskParamsSchema>;
 
+// attachment schemas
+export const attachmentSchema = z.object({
+    projectId: z.string().uuid("Invalid project ID format").optional(),
+    taskId: z.string().uuid("Invalid task ID format").optional()
+}).refine(
+    (data) => data.projectId || data.taskId,
+    {
+        message: "Either projectId or taskId must be provided",
+        path: ["projectId", "taskId"]
+    }
+);
+
+export const updateAttachmentSchema = z.object({
+    fileName: z.string().min(1, "Filename is required").max(255, "Filename too long").optional()
+});
+
+export const attachmentParamsSchema = z.object({
+    id: z.string().uuid("Invalid attachment ID format")
+});
+
+export const taskAttachmentParamsSchema = z.object({
+    id: z.string().uuid("Invalid task ID format")
+});
+
+export const projectAttachmentParamsSchema = z.object({
+    id: z.string().uuid("Invalid project ID format")
+});
+
+export type AttachmentRequest = z.infer<typeof attachmentSchema>;
+export type UpdateAttachmentRequest = z.infer<typeof updateAttachmentSchema>;
+export type AttachmentParams = z.infer<typeof attachmentParamsSchema>;
+export type TaskAttachmentParams = z.infer<typeof taskAttachmentParamsSchema>;
+export type ProjectAttachmentParams = z.infer<typeof projectAttachmentParamsSchema>;
+
 
 

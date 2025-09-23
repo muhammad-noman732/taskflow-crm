@@ -15,6 +15,7 @@ import projectMemberRoutes from './routes/projectMemberRoutes';
 import commentRouter from './routes/commentsRoutes';
 import labelRoutes from './routes/labelRoutes';
 import taskLabelRoutes from './routes/taskLabelRoutes';
+import attachmentRoutes from './routes/attachmentRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -80,6 +81,7 @@ app.use('/api/project-members', projectMemberRoutes);
 app.use('/api/comments', commentRouter);
 app.use('/api/labels', labelRoutes);
 app.use('/api/task-labels', taskLabelRoutes);
+app.use('/api/attachments', attachmentRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {

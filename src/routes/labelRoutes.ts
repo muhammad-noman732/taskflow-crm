@@ -24,3 +24,4 @@ labelRouter.put("/:id", validateParams(idParamSchema), validateRequest(updateLab
 labelRouter.delete("/:id", validateParams(idParamSchema), authenticateToken, deleteLabel);
 
 export default labelRouter;
+
