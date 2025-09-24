@@ -67,7 +67,33 @@ export const projectSchema = z.object({
   status: z.enum(["ACTIVE" , "IN_PROGRES" , "COMPLETED"]).default("ACTIVE"),
   startDate: z.string().datetime(),
   dueDate: z.string().datetime(),
-  clientId: z.string().uuid("Invalid client ID format").optional()
+  clientId: z.string().uuid("Invalid client ID format").optional(),
+  
+  // NEW PRICING FIELDS
+  pricingType: z.enum(["HOURLY", "FIXED", "RETAINER"]).default("HOURLY"),
+  fixedPrice: z.string().transform(Number).pipe(z.number().positive("Fixed price must be positive")).optional(),
+  hourlyRate: z.string().transform(Number).pipe(z.number().positive("Hourly rate must be positive")).optional(),
+  estimatedHours: z.string().transform(Number).pipe(z.number().int().positive("Estimated hours must be positive")).optional(),
+  budget: z.string().transform(Number).pipe(z.number().positive("Budget must be positive")).optional()
+});
+
+// project update schema (all fields optional)
+export const updateProjectSchema = z.object({
+  name: z.string().min(3, "Project name must be at least 3 characters").optional(),
+  description: z.string()
+    .min(10, "Description should be a minimum of 10 characters")
+    .max(300, "Description should be at most 300 characters").optional(),
+  status: z.enum(["ACTIVE" , "IN_PROGRES" , "COMPLETED"]).optional(),
+  startDate: z.string().datetime().optional(),
+  dueDate: z.string().datetime().optional(),
+  clientId: z.string().uuid("Invalid client ID format").optional(),
+  
+  // NEW PRICING FIELDS
+  pricingType: z.enum(["HOURLY", "FIXED", "RETAINER"]).optional(),
+  fixedPrice: z.string().transform(Number).pipe(z.number().positive("Fixed price must be positive")).optional(),
+  hourlyRate: z.string().transform(Number).pipe(z.number().positive("Hourly rate must be positive")).optional(),
+  estimatedHours: z.string().transform(Number).pipe(z.number().int().positive("Estimated hours must be positive")).optional(),
+  budget: z.string().transform(Number).pipe(z.number().positive("Budget must be positive")).optional()
 });
 
 // client schema
@@ -78,6 +104,20 @@ export const clientSchema = z.object({
   type: z.enum(['CRM', 'INVITED']).default('CRM'),
   userId: z.string().uuid().optional(),
   notes: z.string().optional(),
+  // NEW PRICING FIELD
+  customHourlyRate: z.string().transform(Number).pipe(z.number().positive("Custom hourly rate must be positive")).optional(),
+});
+
+// client update schema (all fields optional)
+export const updateClientSchema = z.object({
+  name: z.string().min(2, "Client name must be at least 2 characters").optional(),
+  email: z.string().email("Invalid email format").optional(),
+  company: z.string().optional(),
+  type: z.enum(['CRM', 'INVITED']).optional(),
+  userId: z.string().uuid().optional(),
+  notes: z.string().optional(),
+  // NEW PRICING FIELD
+  customHourlyRate: z.string().transform(Number).pipe(z.number().positive("Custom hourly rate must be positive")).optional(),
 });
 
 // invited client schema (for linking existing CLIENT users)
@@ -229,6 +269,123 @@ export type UpdateAttachmentRequest = z.infer<typeof updateAttachmentSchema>;
 export type AttachmentParams = z.infer<typeof attachmentParamsSchema>;
 export type TaskAttachmentParams = z.infer<typeof taskAttachmentParamsSchema>;
 export type ProjectAttachmentParams = z.infer<typeof projectAttachmentParamsSchema>;
+
+// Contact schemas
+export const createContactSchema = z.object({
+  clientId: z.string().uuid("Invalid client ID format"),
+  name: z.string().min(2, "Contact name must be at least 2 characters").max(100, "Contact name too long"),
+  email: z.string().email("Invalid email format").optional().or(z.literal("")),
+  phone: z.string().min(10, "Phone number must be at least 10 digits").max(20, "Phone number too long").optional().or(z.literal("")),
+  position: z.string().min(2, "Position must be at least 2 characters").max(100, "Position too long").optional().or(z.literal("")),
+  isPrimary: z.boolean().default(false)
+});
+
+export const updateContactSchema = z.object({
+  name: z.string().min(2, "Contact name must be at least 2 characters").max(100, "Contact name too long").optional(),
+  email: z.string().email("Invalid email format").optional().or(z.literal("")),
+  phone: z.string().min(10, "Phone number must be at least 10 digits").max(20, "Phone number too long").optional().or(z.literal("")),
+  position: z.string().min(2, "Position must be at least 2 characters").max(100, "Position too long").optional().or(z.literal("")),
+  isPrimary: z.boolean().optional()
+}).refine(
+  (data) => Object.keys(data).length > 0,
+  {
+    message: "At least one field must be provided for update",
+    path: ["name", "email", "phone", "position", "isPrimary"]
+  }
+);
+
+export const contactParamsSchema = z.object({
+  id: z.string().uuid("Invalid contact ID format")
+});
+
+export const clientContactsParamsSchema = z.object({
+  clientId: z.string().uuid("Invalid client ID format")
+});
+
+export type CreateContactRequest = z.infer<typeof createContactSchema>;
+export type UpdateContactRequest = z.infer<typeof updateContactSchema>;
+export type ContactParams = z.infer<typeof contactParamsSchema>;
+export type ClientContactsParams = z.infer<typeof clientContactsParamsSchema>;
+
+// Time Entry schemas
+export const startTimerSchema = z.object({
+  taskId: z.string().uuid("Invalid task ID format"),
+  notes: z.string().max(500, "Notes too long").optional(),
+  billable: z.boolean().default(true)
+});
+
+export const stopTimerSchema = z.object({
+  timeEntryId: z.string().uuid("Invalid time entry ID format")
+});
+
+export const createTimeEntrySchema = z.object({
+  taskId: z.string().uuid("Invalid task ID format"),
+  startedAt: z.string().datetime("Invalid start date format"),
+  endedAt: z.string().datetime("Invalid end date format"),
+  notes: z.string().max(500, "Notes too long").optional(),
+  billable: z.boolean().default(true)
+}).refine(
+  (data) => new Date(data.endedAt) > new Date(data.startedAt),
+  {
+    message: "End time must be after start time",
+    path: ["endedAt"]
+  }
+);
+
+export const updateTimeEntrySchema = z.object({
+  startedAt: z.string().datetime("Invalid start date format").optional(),
+  endedAt: z.string().datetime("Invalid end date format").optional().or(z.literal("")),
+  notes: z.string().max(500, "Notes too long").optional(),
+  billable: z.boolean().optional()
+}).refine(
+  (data) => {
+    if (data.startedAt && data.endedAt && data.endedAt !== "") {
+      return new Date(data.endedAt) > new Date(data.startedAt);
+    }
+    return true;
+  },
+  {
+    message: "End time must be after start time",
+    path: ["endedAt"]
+  }
+).refine(
+  (data) => Object.keys(data).length > 0,
+  {
+    message: "At least one field must be provided for update",
+    path: ["startedAt", "endedAt", "notes", "billable"]
+  }
+);
+
+export const timeEntryParamsSchema = z.object({
+  id: z.string().uuid("Invalid time entry ID format")
+});
+
+export const timeEntryQuerySchema = z.object({
+  taskId: z.string().uuid("Invalid task ID format").optional(),
+  projectId: z.string().uuid("Invalid project ID format").optional(),
+  userId: z.string().uuid("Invalid user ID format").optional(),
+  startDate: z.string().datetime("Invalid start date format").optional(),
+  endDate: z.string().datetime("Invalid end date format").optional(),
+  billable: z.enum(['true', 'false']).optional()
+}).refine(
+  (data) => {
+    if (data.startDate && data.endDate) {
+      return new Date(data.endDate) > new Date(data.startDate);
+    }
+    return true;
+  },
+  {
+    message: "End date must be after start date",
+    path: ["endDate"]
+  }
+);
+
+export type StartTimerRequest = z.infer<typeof startTimerSchema>;
+export type StopTimerRequest = z.infer<typeof stopTimerSchema>;
+export type CreateTimeEntryRequest = z.infer<typeof createTimeEntrySchema>;
+export type UpdateTimeEntryRequest = z.infer<typeof updateTimeEntrySchema>;
+export type TimeEntryParams = z.infer<typeof timeEntryParamsSchema>;
+export type TimeEntryQuery = z.infer<typeof timeEntryQuerySchema>;
 
 
 

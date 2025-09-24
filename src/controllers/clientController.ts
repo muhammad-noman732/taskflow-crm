@@ -4,7 +4,15 @@ import { prisma } from "@/config/db";
 
 export const createClient = async (req: Request, res: Response) => {
   try {
-    const { name, email, company, type = "CRM", notes } = req.body;
+    const { 
+      name, 
+      email, 
+      company, 
+      type = "CRM", 
+      notes,
+      // NEW PRICING FIELD
+      customHourlyRate
+    } = req.body;
     const organizationId = req.user?.organizationId;
 
     if (!organizationId) {
@@ -73,6 +81,8 @@ export const createClient = async (req: Request, res: Response) => {
         type: "CRM",
         notes,
         organizationId,
+        // NEW PRICING FIELD
+        customHourlyRate: customHourlyRate ? parseFloat(customHourlyRate) : null,
       },
       include: {
         organization: true,
@@ -268,7 +278,16 @@ export const updateClient = async (req: Request, res: Response) => {
     try {
         const currentOrgId = req.user?.organizationId;
         const clientId = req.params.id;
-        const {name , company , email, type, userId, notes} = req.body;
+        const {
+          name, 
+          company, 
+          email, 
+          type, 
+          userId, 
+          notes,
+          // NEW PRICING FIELD
+          customHourlyRate
+        } = req.body;
         if (!currentOrgId ) {
           return res.status(401).json({
              success: false,
@@ -316,6 +335,11 @@ export const updateClient = async (req: Request, res: Response) => {
     if (company !== undefined) updateData.company = company;
     if (type) updateData.type = type;
     if (notes !== undefined) updateData.notes = notes;
+    
+    // NEW PRICING UPDATE
+    if (customHourlyRate !== undefined) {
+      updateData.customHourlyRate = customHourlyRate ? parseFloat(customHourlyRate) : null;
+    }
 
     const clientInfo = await prisma.client.update({
       where: { id: clientId },

@@ -125,6 +125,10 @@ export const doSignup = async (req: Request, res: Response) => {
                         create: {
                         name: organizationName,
                         slug: orgSlug,
+                        // NEW PRICING DEFAULTS
+                        defaultHourlyRate: 50.00,
+                        currency: "USD",
+                        taxRate: 0.00,
                               },
                         },
                     },

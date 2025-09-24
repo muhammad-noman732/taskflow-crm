@@ -41,12 +41,27 @@ enum ProjectStatus{
    ACTIVE
    IN_PROGRESS
    COMPLETED
-}         
+}     
+
+
 enum ClientType {
   CRM      // Business entity only
   INVITED  // Has login access
 }
 
+enum PricingType {
+  HOURLY      // Bill by hours worked
+  FIXED       // Fixed project price
+  RETAINER    // Monthly retainer
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
 // MODELS - Core functionality only
 model User {
   id            String                   @id @default(uuid())
@@ -68,6 +83,7 @@ model User {
   taskAssignees TaskAssignee[]
   comments      Comment[]
   attatchments Attachment[]
+  timeEntries    TimeEntry[]
 }
 
 model Organization {
@@ -76,12 +92,20 @@ model Organization {
   slug        String                   @unique
   logoUrl     String?
   createdAt   DateTime                 @default(now())
+  
+  // PRICING SETTINGS
+  defaultHourlyRate Decimal?             @default(50.00)  // Company's standard billing rate
+  currency         String               @default("USD")   // Company's default currency
+  taxRate          Decimal?             @default(0.00)    // Default tax rate (0-100)
+  
+  // relations
   invitations Invitation[]
   memberships OrganizationMembership[]
   clients     Client[]
   projects    Project[]
   label      Label[]
   attatchments Attachment[]
+  invoices  Invoice[]
 }
 
 model OrganizationMembership {
@@ -125,11 +149,27 @@ model Client {
   userId         String?      // Link to User if invited
   user           User?        @relation(fields: [userId], references: [id])
   
+  // CLIENT-SPECIFIC PRICING (optional)
+  customHourlyRate Decimal?   // Special rate for this client (overrides org default)
+  
   // Existing fields
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
   projects       Project[]
+  contacts       Contact[]
+  invoices  Invoice[]
   createdAt      DateTime     @default(now())
+}
+
+ model Contact {
+  id        String @id @default(uuid())
+  client    Client @relation(fields: [clientId], references: [id])
+  clientId  String
+  name      String
+  email     String?
+  phone     String?
+  position  String?
+  isPrimary Boolean @default(false)
 }
 
 model Project {
@@ -142,6 +182,13 @@ model Project {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
+  // PRICING FIELDS
+  pricingType    PricingType  @default(HOURLY)     // How this project is billed
+  fixedPrice     Decimal?                          // For fixed-price projects
+  hourlyRate     Decimal?                          // Override user's default rate
+  estimatedHours Int?                              // For project planning
+  budget         Decimal?                          // Project budget limit
+
   createdBy      String
   creator        OrganizationMembership @relation("ProjectCreator", fields: [createdBy], references: [id])
   org            Organization  @relation(fields: [orgId], references: [id])
@@ -152,6 +199,7 @@ model Project {
   tasks          Task[]
   comments      Comment[] @relation("projectComments")
   attatchments  Attachment[]
+  invoices      Invoice[]
 }
 
 model ProjectMember {
@@ -184,6 +232,7 @@ model Task {
   creator       OrganizationMembership @relation("TaskCreator", fields: [createdBy], references: [id])
   taskLabel     TaskLabel[]
   attatchments  Attachment[]
+  timeEntries    TimeEntry[]
 }
 
 model TaskAssignee {
@@ -253,6 +302,88 @@ model Attachment {
   size       Int
   createdAt  DateTime @default(now())
 }
+
+
+model TimeEntry {
+  id        String @id @default(uuid())
+  task      Task @relation(fields: [taskId], references: [id])
+  taskId    String
+  user      User @relation(fields: [userId], references: [id])
+  userId    String
+  startedAt DateTime
+  endedAt   DateTime?
+  minutes   Int?
+  billable  Boolean @default(true)
+  note      String?
+  
+  // INVOICE RELATIONS
+  invoiceEntries InvoiceTimeEntry[]
+}
+
+// INVOICE MODELS
+model Invoice {
+  id         String @id @default(uuid())
+  org        Organization @relation(fields: [orgId], references: [id])
+  orgId      String
+  client     Client @relation(fields: [clientId], references: [id])
+  clientId   String
+  project    Project? @relation(fields: [projectId], references: [id])
+  projectId  String?
+  invoiceNo  String @unique
+  issueDate  DateTime @default(now())
+  dueDate    DateTime
+  status     InvoiceStatus @default(DRAFT)
+  currency   String @default("USD")
+  subtotal   Decimal @default(0)
+  tax        Decimal @default(0)
+  total      Decimal @default(0)
+  notes      String?
+  
+  // RELATIONS
+  lines         InvoiceLine[]
+  timeEntries   InvoiceTimeEntry[]
+  payments      Payment[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model InvoiceLine {
+  id          String @id @default(uuid())
+  invoice     Invoice @relation(fields: [invoiceId], references: [id])
+  invoiceId   String
+  description String
+  qty         Decimal
+  unitPrice   Decimal
+  amount      Decimal
+  createdAt   DateTime @default(now())
+}
+
+model InvoiceTimeEntry {
+  id           String @id @default(uuid())
+  invoice      Invoice @relation(fields: [invoiceId], references: [id])
+  invoiceId    String
+  timeEntry    TimeEntry @relation(fields: [timeEntryId], references: [id])
+  timeEntryId  String
+  hourlyRate   Decimal    // Rate used for this specific entry
+  hours        Decimal    // Hours worked (minutes/60)
+  amount       Decimal    // hours × hourlyRate
+  createdAt    DateTime @default(now())
+  
+  @@unique([invoiceId, timeEntryId])
+}
+
+model Payment {
+  id        String @id @default(uuid())
+  invoice   Invoice @relation(fields: [invoiceId], references: [id])
+  invoiceId String
+  amount    Decimal
+  method    String
+  paidAt    DateTime
+  reference String?
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
 
 
 

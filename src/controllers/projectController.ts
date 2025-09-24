@@ -7,7 +7,20 @@ import { prisma } from "@/config/db";
 
 export const createProject = async (req: Request, res: Response) => {
   try {
-    const { name, description, status, startDate , dueDate, clientId } = req.body;
+    const { 
+      name, 
+      description, 
+      status, 
+      startDate, 
+      dueDate, 
+      clientId,
+      // NEW PRICING FIELDS
+      pricingType = 'HOURLY',
+      fixedPrice,
+      hourlyRate,
+      estimatedHours,
+      budget
+    } = req.body;
     console.log("client id ", clientId);
     console.log("User from JWT:", req.user);
     console.log("Organization ID:", req.user?.organizationId);
@@ -78,6 +91,12 @@ export const createProject = async (req: Request, res: Response) => {
         clientId: clientId,
         orgId: currentOrgId,
         createdBy: membership.id,
+        // NEW PRICING FIELDS
+        pricingType,
+        fixedPrice: fixedPrice ? parseFloat(fixedPrice) : null,
+        hourlyRate: hourlyRate ? parseFloat(hourlyRate) : null,
+        estimatedHours: estimatedHours ? parseInt(estimatedHours) : null,
+        budget: budget ? parseFloat(budget) : null,
       },
       include: {
          org: true,
@@ -274,7 +293,18 @@ export const updateProjectById = async (req: Request, res: Response) => {
     try {
 
         const projectId = req.params.id;
-        const { name, description, dueDate , status } = req.body;
+        const { 
+          name, 
+          description, 
+          dueDate, 
+          status,
+          // NEW PRICING FIELDS
+          pricingType,
+          fixedPrice,
+          hourlyRate,
+          estimatedHours,
+          budget
+        } = req.body;
         const currentUserId = req.user?.userId;
         const currentOrgId = req.user?.organizationId
 
@@ -331,7 +361,14 @@ export const updateProjectById = async (req: Request, res: Response) => {
         if (name) updateData.name = name;
         if (description) updateData.description = description;
         if (dueDate) updateData.dueDate = new Date(dueDate);
-        if(status) updateData.status = status
+        if(status) updateData.status = status;
+        
+        // NEW PRICING UPDATES
+        if (pricingType) updateData.pricingType = pricingType;
+        if (fixedPrice !== undefined) updateData.fixedPrice = fixedPrice ? parseFloat(fixedPrice) : null;
+        if (hourlyRate !== undefined) updateData.hourlyRate = hourlyRate ? parseFloat(hourlyRate) : null;
+        if (estimatedHours !== undefined) updateData.estimatedHours = estimatedHours ? parseInt(estimatedHours) : null;
+        if (budget !== undefined) updateData.budget = budget ? parseFloat(budget) : null;
 
         const updatedProject = await prisma.project.update({
             where: {

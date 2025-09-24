@@ -40,6 +40,7 @@ const newEndpoints = {
   'POST /api/time-entries': 'Create manual time entry',
   'PUT /api/time-entries/:id': 'Update time entry',
   'DELETE /api/time-entries/:id': 'Delete time entry',
+
   
   // Messaging
   'POST /api/channels': 'Create channel',
@@ -69,3 +70,79 @@ const newEndpoints = {
   'GET /api/audit-logs': 'Get audit logs',
   'GET /api/audit-logs/resource/:type/:id': 'Get resource audit logs'
 };
+
+
+
+1. Invoice Controller 💰 (HIGHEST PRIORITY)
+Why: Essential for CRM billing
+Functions:
+createInvoice - Generate invoice from time entries
+updateInvoice - Modify invoice details
+sendInvoice - Email invoice to client
+markAsPaid - Mark invoice as paid
+getInvoices - List all invoices
+getInvoiceById - Get single invoice
+deleteInvoice - Remove invoice
+
+2. Payment Controller 💳 (HIGH PRIORITY)
+Why: Track payments for invoices
+Functions:
+recordPayment - Add payment to invoice
+getPayments - List payments
+updatePayment - Modify payment
+deletePayment - Remove paymen
+
+
+
+3. Notification Controller 🔔 (HIGH PRIORITY)
+Why: User engagement and alerts
+Functions:
+createNotification - Send notification
+getUserNotifications - Get user's notifications
+markAsRead - Mark notification as read
+deleteNotification - Remove notification
+getUnreadCount - Count unread notifications
+
+
+4. Audit Log Controller 📝 (MEDIUM PRIORITY)
+Why: Compliance and tracking
+Functions:
+getAuditLogs - List audit logs
+filterLogs - Filter by user/action/date
+exportLogs - Export audit data
+
+
+5. Milestone Controller 🎯 (MEDIUM PRIORITY)
+Why: Project phase tracking
+Functions:
+createMilestone - Add project milestone
+updateMilestone - Modify milestone
+getMilestones - List project milestones
+deleteMilestone - Remove milestone
+
+6. Subtask Controller �� (MEDIUM PRIORITY)
+Why: Task breakdown
+Functions:
+createSubtask - Add subtask to task
+updateSubtask - Modify subtask
+getSubtasks - List task subtasks
+deleteSubtask - Remove subtask
+
+
+
+7. Channel Controller 💬 (LOW PRIORITY)
+Why: Team communication
+Functions:
+createChannel - Create project channel
+joinChannel - Add user to channel
+getChannels - List channels
+deleteChannel - Remove channel
+
+
+8. Message Controller �� (LOW PRIORITY)
+Why: Real-time messaging
+Functions:
+sendMessage - Send message to channel
+getMessages - Get channel messages
+updateMessage - Edit message
+deleteMessage - Remove message
