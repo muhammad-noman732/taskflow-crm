@@ -15,37 +15,37 @@ export const createInvoice = async (req: Request, res: Response) => {
         const userId = req.user?.userId;
         const organizationId = req.user?.organizationId;
 
-        // 1. Authentication check
-        if (!userId || !organizationId) {
-            return res.status(401).json({
-                success: false,
-                message: "User not authenticated or no organization context",
-                timestamp: new Date().toISOString()
-            });
-        }
-
-        // 2. Validate membership
-        const membership = await prisma.organizationMembership.findUnique({
-            where: {
-                userId_organizationId: {
-                    userId: userId,
+         // 1. Authentication check
+      if (!userId || !organizationId) {
+                     return res.status(401).json({
+                        success: false,
+                        message: "User not authenticated or no organization context",
+                       timestamp: new Date().toISOString()
+                        });
+                    }
+                
+            // 2. Validate membership
+             const membership = await prisma.organizationMembership.findUnique({
+                     where: {
+                        userId_organizationId: {
+                            userId: userId,
                     organizationId: organizationId
+                                }
+                            }
+                        });
+                
+                if (!membership) {
+                    return res.status(403).json({
+                        success: false,
+                        message: "Not a member of this organization",
+                        timestamp: new Date().toISOString()
+                    });
                 }
-            }
-        });
-
-        if (!membership) {
-            return res.status(403).json({
-                success: false,
-                message: "Not a member of this organization",
-                timestamp: new Date().toISOString()
-            });
-        }
-
+        
         // 3. Check permissions (only OWNER, ADMIN, MANAGER can create invoices)
-        if (!['OWNER', 'ADMIN', 'MANAGER'].includes(membership.role)) {
-            return res.status(403).json({
-                success: false,
+                if (!['OWNER', 'ADMIN', 'MANAGER'].includes(membership.role)) {
+                            return res.status(403).json({
+                                success: false,
                 message: "Insufficient permissions to create invoices",
                 timestamp: new Date().toISOString()
             });
@@ -74,10 +74,10 @@ export const createInvoice = async (req: Request, res: Response) => {
             return res.status(404).json({
                 success: false,
                 message: "Organization not found",
-                timestamp: new Date().toISOString()
-            });
-        }
-
+                                timestamp: new Date().toISOString()
+                            });
+                        }
+                
         // 6. Validate client exists and belongs to organization
         const client = await prisma.client.findFirst({
             where: {
@@ -108,7 +108,7 @@ export const createInvoice = async (req: Request, res: Response) => {
             });
 
             if (!project) {
-                return res.status(404).json({
+            return res.status(404).json({
                     success: false,
                     message: "Project not found or doesn't belong to this organization",
                     timestamp: new Date().toISOString()
@@ -252,7 +252,7 @@ export const createInvoice = async (req: Request, res: Response) => {
                         name: true,
                         email: true,
                         company: true,
-                        status: true
+                          status: true
                     }
                 },
                 lines: true,
@@ -678,7 +678,7 @@ export const getInvoices = async (req: Request, res: Response) => {
             });
         }
 
-        // 4. Get query parameters for filtering
+        // 4. Get query parameters for filtering and pagination
         const { 
             clientId, 
             projectId, 
@@ -689,11 +689,12 @@ export const getInvoices = async (req: Request, res: Response) => {
             limit = '10'
         } = req.query;
 
-        // 5. Build where clause for filtering
+        // 5. Build whereClause for database filtering
         const whereClause: any = {
-            orgId: organizationId
+            orgId: organizationId  // Always filter by user's organization
         };
 
+        // Add filters only if provided by user
         if (clientId) whereClause.clientId = clientId;
         if (projectId) whereClause.projectId = projectId;
         if (status) whereClause.status = status;
@@ -708,8 +709,9 @@ export const getInvoices = async (req: Request, res: Response) => {
         const limitNum = parseInt(limit as string) || 10;
         const skip = (pageNum - 1) * limitNum;
 
-        // 7. Get invoices with pagination
+        // 7. Get invoices and total count (parallel - faster!)
         const [invoices, totalCount] = await Promise.all([
+            // Get paginated invoices
             prisma.invoice.findMany({
                 where: whereClause,
                 include: {
@@ -729,37 +731,30 @@ export const getInvoices = async (req: Request, res: Response) => {
                         }
                     },
                     lines: true,
-                    _count: {
-                        select: {
-                            lines: true,
-                            timeEntries: true
-                        }
-                    }
+                    timeEntries: true
                 },
                 orderBy: { createdAt: 'desc' },
                 skip: skip,
                 take: limitNum
             }),
-            prisma.invoice.count({ where: whereClause })
+            
+            // Count total invoices (for pagination info)
+            prisma.invoice.count({
+                where: whereClause
+            })
         ]);
 
-        // 8. Calculate summary statistics
-        const summary = await prisma.invoice.aggregate({
-            where: whereClause,
-            _sum: {
-                total: true
-            },
-            _count: {
-                _all: true
-            }
-        });
-
-        const statusCounts = await prisma.invoice.groupBy({
-            by: ['status'],
-            where: whereClause,
-            _count: {
-                _all: true
-            }
+        // 8. Calculate summary from current page invoices
+      // Method 1: Using map + reduce (easier to understand)
+        const amounts = invoices.map(invoice => parseFloat(invoice.total.toString()));
+        const totalAmount = amounts.reduce((sum, amount) => sum + amount, 0);
+        
+        // Method 2: Using map for status breakdown (easier to understand)
+        const statuses = invoices.map(invoice => invoice.status);
+        const statusBreakdown: Record<string, number> = {};
+        
+        statuses.forEach(status => {
+            statusBreakdown[status] = (statusBreakdown[status] || 0) + 1;
         });
 
         return res.status(200).json({
@@ -776,12 +771,9 @@ export const getInvoices = async (req: Request, res: Response) => {
                     hasPrevPage: pageNum > 1
                 },
                 summary: {
-                    totalInvoices: summary._count._all,
-                    totalAmount: summary._sum.total || 0,
-                    statusBreakdown: statusCounts.reduce((acc, item) => {
-                        acc[item.status] = item._count._all;
-                        return acc;
-                    }, {} as Record<string, number>)
+                    totalInvoices: totalCount,  // Total in database
+                    currentPageAmount: totalAmount,  // Amount on current page
+                    statusBreakdown: statusBreakdown  // Status count on current page
                 }
             },
             timestamp: new Date().toISOString()
@@ -854,8 +846,6 @@ export const getInvoiceById = async (req: Request, res: Response) => {
                         name: true,
                         company: true,
                         email: true,
-                        phone: true,
-                        address: true,
                         status: true
                     }
                 },
@@ -900,9 +890,6 @@ export const getInvoiceById = async (req: Request, res: Response) => {
                     select: {
                         id: true,
                         name: true,
-                        email: true,
-                        phone: true,
-                        address: true,
                         currency: true,
                         taxRate: true
                     }
@@ -927,6 +914,268 @@ export const getInvoiceById = async (req: Request, res: Response) => {
 
     } catch (error: any) {
         console.error("Get invoice by ID error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: process.env.NODE_ENV === 'development' ? error.message : "Something went wrong",
+            timestamp: new Date().toISOString()
+        });
+    }
+};
+
+// Mark invoice as paid
+export const markAsPaid = async (req: Request, res: Response) => {
+    try {
+        const invoiceId = req.params.id;
+        const { paidAt, paymentMethod, paymentReference, notes } = req.body;
+        const userId = req.user?.userId;
+        const organizationId = req.user?.organizationId;
+
+        // 1. Authentication check
+        if (!userId || !organizationId) {
+            return res.status(401).json({
+                success: false,
+                message: "User not authenticated or no organization context",
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // 2. Validate membership
+        const membership = await prisma.organizationMembership.findUnique({
+            where: {
+                userId_organizationId: {
+                    userId: userId,
+                    organizationId: organizationId
+                }
+            }
+        });
+
+        if (!membership) {
+            return res.status(403).json({
+                success: false,
+                message: "Not a member of this organization",
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // 3. Check permissions
+        if (!['OWNER', 'ADMIN', 'MANAGER'].includes(membership.role)) {
+            return res.status(403).json({
+                success: false,
+                message: "Insufficient permissions to mark invoices as paid",
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // 4. Find and validate invoice
+        const invoice = await prisma.invoice.findFirst({
+            where: {
+                id: invoiceId,
+                orgId: organizationId
+            }
+        });
+
+        if (!invoice) {
+            return res.status(404).json({
+                success: false,
+                message: "Invoice not found or doesn't belong to this organization",
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // 5. Check if invoice can be marked as paid
+        if (invoice.status === 'PAID') {
+            return res.status(400).json({
+                success: false,
+                message: "Invoice is already marked as paid",
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        if (invoice.status === 'DRAFT') {
+            return res.status(400).json({
+                success: false,
+                message: "Cannot mark DRAFT invoice as paid. Please send the invoice first.",
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        if (invoice.status === 'CANCELLED') {
+            return res.status(400).json({
+                success: false,
+                message: "Cannot mark CANCELLED invoice as paid",
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // 6. Update invoice status to PAID
+        const updatedInvoice = await prisma.invoice.update({
+            where: { id: invoiceId },
+            data: {
+                status: 'PAID'
+            },
+            include: {
+                client: {
+                    select: {
+                        id: true,
+                        name: true,
+                        company: true,
+                        email: true
+                    }
+                },
+                project: {
+                    select: {
+                        id: true,
+                        name: true
+                    }
+                }
+            }
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Invoice marked as paid successfully",
+            data: {
+                invoice: updatedInvoice,
+                paymentDetails: {
+                    paidAt: paidAt || new Date().toISOString(),
+                    paymentMethod: paymentMethod || 'Not specified',
+                    paymentReference: paymentReference || null,
+                    notes: notes || null
+                }
+            },
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error: any) {
+        console.error("Mark as paid error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: process.env.NODE_ENV === 'development' ? error.message : "Something went wrong",
+            timestamp: new Date().toISOString()
+        });
+    }
+};
+
+// Delete invoice (only DRAFT invoices)
+export const deleteInvoice = async (req: Request, res: Response) => {
+    try {
+        const invoiceId = req.params.id;
+        const userId = req.user?.userId;
+        const organizationId = req.user?.organizationId;
+
+        // 1. Authentication check
+        if (!userId || !organizationId) {
+            return res.status(401).json({
+                success: false,
+                message: "User not authenticated or no organization context",
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // 2. Validate membership
+        const membership = await prisma.organizationMembership.findUnique({
+            where: {
+                userId_organizationId: {
+                    userId: userId,
+                    organizationId: organizationId
+                }
+            }
+        });
+
+        if (!membership) {
+            return res.status(403).json({
+                success: false,
+                message: "Not a member of this organization",
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // 3. Check permissions (only OWNER can delete invoices)
+        if (!['OWNER'].includes(membership.role)) {
+            return res.status(403).json({
+                success: false,
+                message: "Only organization owners can delete invoices",
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // 4. Find and validate invoice
+        const invoice = await prisma.invoice.findFirst({
+            where: {
+                id: invoiceId,
+                orgId: organizationId
+            },
+            include: {
+                client: {
+                    select: {
+                        name: true,
+                        company: true
+                    }
+                },
+                project: {
+                    select: {
+                        name: true
+                    }
+                }
+            }
+        });
+
+        if (!invoice) {
+            return res.status(404).json({
+                success: false,
+                message: "Invoice not found or doesn't belong to this organization",
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // 5. Check if invoice can be deleted (only DRAFT invoices)
+        if (invoice.status !== 'DRAFT') {
+            return res.status(400).json({
+                success: false,
+                message: "Only DRAFT invoices can be deleted. Cannot delete SENT or PAID invoices.",
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        // 6. Delete invoice and related data (in correct order due to foreign key constraints)
+        // because if directly delete the invoice than lineInvoice and timeentry still exists
+        await prisma.$transaction(async (tx) => {
+            // Delete invoice time entries first
+            await tx.invoiceTimeEntry.deleteMany({
+                where: { invoiceId: invoiceId }
+            });
+
+            // Delete invoice lines
+            await tx.invoiceLine.deleteMany({
+                where: { invoiceId: invoiceId }
+            });
+
+            // Finally delete the invoice
+            await tx.invoice.delete({
+                where: { id: invoiceId }
+            });
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Invoice deleted successfully",
+            data: {
+                deletedInvoice: {
+                    id: invoice.id,
+                    invoiceNo: invoice.invoiceNo,
+                    client: invoice.client?.name || invoice.client?.company,
+                    project: invoice.project?.name,
+                    total: invoice.total,
+                    status: invoice.status
+                }
+            },
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error: any) {
+        console.error("Delete invoice error:", error);
         return res.status(500).json({
             success: false,
             message: "Internal server error",

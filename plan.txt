@@ -1,26 +1,21 @@
 // New API endpoints structure
-const newEndpoints = {
-  // Comments
-  'POST /api/comments': 'Create comment',
-  'GET /api/comments/task/:taskId': 'Get task comments',
-  'GET /api/comments/project/:projectId': 'Get project comments',
-  'PUT /api/comments/:id': 'Update comment',
-  'DELETE /api/comments/:id': 'Delete comment',
-  
-  // Attachments
-  'POST /api/attachments/upload': 'Upload file',
-  'GET /api/attachments/task/:taskId': 'Get task attachments',
-  'GET /api/attachments/project/:projectId': 'Get project attachments',
-  'DELETE /api/attachments/:id': 'Delete attachment',
-  
-  // Labels
-  'POST /api/labels': 'Create label',
-  'GET /api/labels': 'Get organization labels',
-  'PUT /api/labels/:id': 'Update label',
-  'DELETE /api/labels/:id': 'Delete label',
-  'POST /api/tasks/:taskId/labels': 'Add label to task',
-  'DELETE /api/tasks/:taskId/labels/:labelId': 'Remove label from task',
-  
+Dashboard Controller (Most Important)
+Organization overview
+Project statistics
+Revenue charts
+Recent activities
+
+
+Phase 2: Business Intelligence (PRIORITY 2) 📊
+Analytics/Reporting Controller
+Time tracking reports
+Project profitability
+Team productivity
+Client analysis
+Phase 3: Enterprise Features (PRIORITY 3) 🏢
+Audit Log Controller (if targeting enterprise)
+Project Milestones (if clients request it)
+
   // Milestones
   'POST /api/milestones': 'Create milestone',
   'GET /api/milestones/project/:projectId': 'Get project milestones',
@@ -69,7 +64,7 @@ const newEndpoints = {
   // Audit Logs
   'GET /api/audit-logs': 'Get audit logs',
   'GET /api/audit-logs/resource/:type/:id': 'Get resource audit logs'
-};
+
 
 
 
@@ -146,3 +141,32 @@ sendMessage - Send message to channel
 getMessages - Get channel messages
 updateMessage - Edit message
 deleteMessage - Remove message
+
+
+
+📋 HOW TO START REAL-TIME COMMUNICATION:
+🎯 Step 1: Install Socket.io
+🎯 Step 2: Learn These Socket.io Concepts:
+Server Setup - Integrate Socket.io with your Express server
+Authentication - Verify JWT tokens in socket connections
+Room Management - Join users to channel-specific rooms
+Event Handling - Listen for and emit real-time events
+Namespace Organization - Separate chat from other real-time features
+
+
+🎯 Step 3: Key Real-Time Events You'll Need:
+join_channel - User joins a channel room
+leave_channel - User leaves a channel room
+new_message - Broadcast new messages to channel members
+message_updated - Broadcast message edits
+message_deleted - Broadcast message deletions
+user_typing - Show typing indicators
+user_online - Show online/offline status
+
+
+
+Start simple - Just broadcast new messages
+Add rooms - Channel-specific message broadcasting
+Add presence - Online/offline status
+Add typing - Typing indicators
+Add notifications - Real-time alerts

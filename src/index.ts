@@ -6,6 +6,11 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
+import http from   'http'
+import { Server } from 'socket.io';
+
+
+// import routes
 import authRoutes from '@/routes/authRoutes';
 import invitationRoutes from '@/routes/invitationRoutes';
 import projectRouter from './routes/projectRoutes';
@@ -18,15 +23,61 @@ import taskLabelRoutes from './routes/taskLabelRoutes';
 import attachmentRoutes from './routes/attachmentRoutes';
 import contactRoutes from './routes/contactRoutes';
 import timeEntryRoutes from './routes/timeEntryRoutes';
+import invoiceRoutes from './routes/invoiceRoutes';
+import paymentRoutes from './routes/paymentRoutes';
+import channelRoutes from './routes/channelRoutes';
+import channelMemberRoutes from './routes/channelMemberRoutes';
+import messageRoutes from './routes/messageRoutes';
+import { Socket } from 'dgram';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://127.0.0.1:5500'],
+    credentials: true
+  }
+});
+
 const PORT = process.env.PORT || 3000;
+
+
+io.on("connection" ,(socket)=>{
+  console.log("connected with" , socket.id);
+  socket.on("disconnect" , ()=>{
+     console.log("disconnect");
+  })
+   socket.on('chat_message',(message , room)=>{
+       console.log("message of chat" , message)
+      //  this io.emit()will send the message to all include the sender so this is not a good
+      //  io.emit("chat_message_recieved" , message)
+      if(room ===""){
+        // this will send message to all receiving cliend except sender
+         socket.broadcast.emit("chat_message_recieved" , message)
+      }
+      else{
+        // this will send message to only the user in room(1 to 1 chat)
+        socket.to(room).emit("chat_message_recieved" , message)
+      }
+   })
+
+  //  this is joining the room . kind of group chat 
+   socket.on("join-room", (room, cb)=>{
+      socket.join(room)
+      cb('joined' , room)
+   })
+
+ 
+  
+})
 
 // Security middleware (for xss attacks)
 app.use(helmet());
+
 
 // CORS configuration
 app.use(cors({
@@ -86,6 +137,11 @@ app.use('/api/task-labels', taskLabelRoutes);
 app.use('/api/attachments', attachmentRoutes);
 app.use('/api/contacts', contactRoutes);
 app.use('/api/time-entries', timeEntryRoutes);
+app.use('/api/invoices', invoiceRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/channels', channelRoutes);
+app.use('/api/channels', channelMemberRoutes);
+app.use('/api/channels', messageRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -105,7 +161,7 @@ app.use((req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);

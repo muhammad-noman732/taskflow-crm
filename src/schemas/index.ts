@@ -380,6 +380,106 @@ export const timeEntryQuerySchema = z.object({
   }
 );
 
+// Invoice schemas
+export const createInvoiceSchema = z.object({
+  clientId: z.string().uuid("Invalid client ID format"),
+  projectId: z.string().uuid("Invalid project ID format").optional(),
+  dueDate: z.string().datetime("Invalid due date format").optional(),
+  notes: z.string().max(1000, "Notes too long").optional(),
+  timeEntryIds: z.array(z.string().uuid("Invalid time entry ID format")).default([])
+});
+
+export const updateInvoiceSchema = z.object({
+  clientId: z.string().uuid("Invalid client ID format").optional(),
+  projectId: z.string().uuid("Invalid project ID format").optional(),
+  dueDate: z.string().datetime("Invalid due date format").optional(),
+  notes: z.string().max(1000, "Notes too long").optional(),
+  timeEntryIds: z.array(z.string().uuid("Invalid time entry ID format")).optional()
+}).refine(
+  (data) => Object.keys(data).length > 0,
+  {
+    message: "At least one field must be provided for update",
+    path: ["clientId", "projectId", "dueDate", "notes", "timeEntryIds"]
+  }
+);
+
+export const invoiceParamsSchema = z.object({
+  id: z.string().uuid("Invalid invoice ID format")
+});
+
+export const invoiceQuerySchema = z.object({
+  clientId: z.string().uuid("Invalid client ID format").optional(),
+  projectId: z.string().uuid("Invalid project ID format").optional(),
+  status: z.enum(["DRAFT", "SENT", "PAID", "OVERDUE", "CANCELLED"]).optional(),
+  startDate: z.string().datetime("Invalid start date format").optional(),
+  endDate: z.string().datetime("Invalid end date format").optional(),
+  page: z.string().transform(Number).pipe(z.number().min(1)).default(1),
+  limit: z.string().transform(Number).pipe(z.number().min(1).max(100)).default(10)
+}).refine(
+  (data) => {
+    if (data.startDate && data.endDate) {
+      return new Date(data.endDate) > new Date(data.startDate);
+    }
+    return true;
+  },
+  {
+    message: "End date must be after start date",
+    path: ["endDate"]
+  }
+);
+
+export const markAsPaidSchema = z.object({
+  paidAt: z.string().datetime("Invalid payment date format").optional(),
+  paymentMethod: z.string().min(2, "Payment method must be at least 2 characters").max(50, "Payment method too long").optional(),
+  paymentReference: z.string().max(100, "Payment reference too long").optional(),
+  notes: z.string().max(500, "Notes too long").optional()
+});
+
+// Payment schemas
+export const createPaymentSchema = z.object({
+  invoiceId: z.string().uuid("Invalid invoice ID format"),
+  amount: z.string().transform(Number).pipe(z.number().positive("Amount must be positive")),
+  method: z.string().min(2, "Payment method must be at least 2 characters").max(50, "Payment method too long"),
+  reference: z.string().max(100, "Payment reference too long").optional(),
+  notes: z.string().max(500, "Notes too long").optional()
+});
+
+export const updatePaymentSchema = z.object({
+  method: z.string().min(2, "Payment method must be at least 2 characters").max(50, "Payment method too long").optional(),
+  reference: z.string().max(100, "Payment reference too long").optional(),
+  notes: z.string().max(500, "Notes too long").optional()
+}).refine(
+  (data) => Object.keys(data).length > 0,
+  {
+    message: "At least one field must be provided for update",
+    path: ["method", "reference", "notes"]
+  }
+);
+
+export const paymentParamsSchema = z.object({
+  id: z.string().uuid("Invalid payment ID format")
+});
+
+export const paymentQuerySchema = z.object({
+  method: z.string().min(2, "Payment method must be at least 2 characters").max(50, "Payment method too long").optional(),
+  clientId: z.string().uuid("Invalid client ID format").optional(),
+  startDate: z.string().datetime("Invalid start date format").optional(),
+  endDate: z.string().datetime("Invalid end date format").optional(),
+  page: z.string().transform(Number).pipe(z.number().min(1)).default(1),
+  limit: z.string().transform(Number).pipe(z.number().min(1).max(100)).default(10)
+}).refine(
+  (data) => {
+    if (data.startDate && data.endDate) {
+      return new Date(data.endDate) > new Date(data.startDate);
+    }
+    return true;
+  },
+  {
+    message: "End date must be after start date",
+    path: ["endDate"]
+  }
+);
+
 export type StartTimerRequest = z.infer<typeof startTimerSchema>;
 export type StopTimerRequest = z.infer<typeof stopTimerSchema>;
 export type CreateTimeEntryRequest = z.infer<typeof createTimeEntrySchema>;
@@ -387,5 +487,110 @@ export type UpdateTimeEntryRequest = z.infer<typeof updateTimeEntrySchema>;
 export type TimeEntryParams = z.infer<typeof timeEntryParamsSchema>;
 export type TimeEntryQuery = z.infer<typeof timeEntryQuerySchema>;
 
+// ===================================
+// CHANNEL SCHEMAS
+// ===================================
 
+export const createChannelSchema = z.object({
+  name: z.string().min(1, 'Channel name is required').max(100, 'Channel name too long'),
+  type: z.enum(['PROJECT', 'DIRECT', 'TASK'], {
+    message: 'Type must be PROJECT, DIRECT, or TASK'
+  }),
+  projectId: z.string().uuid('Invalid project ID').optional(),
+  taskId: z.string().uuid('Invalid task ID').optional()
+}).refine(data => {
+  // PROJECT type requires projectId
+  if (data.type === 'PROJECT' && !data.projectId) {
+    return false;
+  }
+  // TASK type requires taskId
+  if (data.type === 'TASK' && !data.taskId) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'PROJECT type requires projectId, TASK type requires taskId'
+});
+
+export const updateChannelSchema = z.object({
+  name: z.string().min(1, 'Channel name is required').max(100, 'Channel name too long').optional(),
+  type: z.enum(['PROJECT', 'DIRECT', 'TASK'], {
+    message: 'Type must be PROJECT, DIRECT, or TASK'
+  }).optional()
+}).refine(data => Object.keys(data).length > 0, {
+  message: 'At least one field must be provided for update'
+});
+
+export const channelParamsSchema = z.object({
+  id: z.string().uuid('Invalid channel ID')
+});
+
+export const channelQuerySchema = z.object({
+  projectId: z.string().uuid('Invalid project ID').optional(),
+  taskId: z.string().uuid('Invalid task ID').optional(),
+  type: z.enum(['PROJECT', 'DIRECT', 'TASK']).optional(),
+  page: z.string().transform(Number).pipe(z.number().min(1)).optional().default(1),
+  limit: z.string().transform(Number).pipe(z.number().min(1).max(50)).optional().default(20)
+});
+
+// Type inference
+export type CreateChannelRequest = z.infer<typeof createChannelSchema>;
+export type UpdateChannelRequest = z.infer<typeof updateChannelSchema>;
+export type ChannelParams = z.infer<typeof channelParamsSchema>;
+export type ChannelQuery = z.infer<typeof channelQuerySchema>;
+
+// ===================================
+// CHANNEL MEMBER SCHEMAS
+// ===================================
+
+export const addChannelMembersSchema = z.object({
+  userIds: z.array(z.string().uuid('Invalid user ID')).min(1, 'At least one user ID is required').max(50, 'Cannot add more than 50 users at once')
+});
+
+export const channelMemberParamsSchema = z.object({
+  id: z.string().uuid('Invalid channel ID')
+});
+
+export const removeChannelMemberParamsSchema = z.object({
+  id: z.string().uuid('Invalid channel ID'),
+  userId: z.string().uuid('Invalid user ID')
+});
+
+// Type inference
+export type AddChannelMembersRequest = z.infer<typeof addChannelMembersSchema>;
+export type ChannelMemberParams = z.infer<typeof channelMemberParamsSchema>;
+export type RemoveChannelMemberParams = z.infer<typeof removeChannelMemberParamsSchema>;
+
+// ===================================
+// MESSAGE SCHEMAS
+// ===================================
+
+export const sendMessageSchema = z.object({
+  body: z.string().min(1, 'Message body is required').max(2000, 'Message too long (max 2000 characters)')
+});
+
+export const updateMessageSchema = z.object({
+  body: z.string().min(1, 'Message body is required').max(2000, 'Message too long (max 2000 characters)')
+});
+
+export const messageParamsSchema = z.object({
+  id: z.string().uuid('Invalid message ID')
+});
+
+export const channelMessagesParamsSchema = z.object({
+  id: z.string().uuid('Invalid channel ID')
+});
+
+export const getMessagesQuerySchema = z.object({
+  limit: z.string().transform(Number).pipe(z.number().min(1).max(100)).optional().default(20),
+  cursor: z.string().optional(),
+  direction: z.enum(['before', 'after']).optional().default('before')
+});
+
+// Type inference
+export type SendMessageRequest = z.infer<typeof sendMessageSchema>;
+export type UpdateMessageRequest = z.infer<typeof updateMessageSchema>;
+export type MessageParams = z.infer<typeof messageParamsSchema>;
+export type ChannelMessagesParams = z.infer<typeof channelMessagesParamsSchema>;
+export type GetMessagesQuery = z.infer<typeof getMessagesQuerySchema>;
 
