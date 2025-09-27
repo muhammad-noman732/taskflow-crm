@@ -1,0 +1,7 @@
+Hero Section - Main headline, CTA, hero image/video
+Features Overview - Project management, time tracking, invoicing
+Benefits Section - Why choose TaskFlow CRM
+Screenshots/Demo - Show your actual CRM interface
+Pricing - Simple pricing tiers
+Testimonials - Social proof (can be mock for now)
+Footer - Links, contact, social media

@@ -56,13 +56,13 @@ export const doSignup = async (req: Request, res: Response) => {
 
         // Check if email already exists
         const existingEmail = await prisma.user.findUnique({
-      where: { email: email },
-        });
+           where: { email: email },
+          });
         if (existingEmail) {
             return res.status(409).json({
                 success: false,
-        message: "Email already exists. Please choose another email",
-        timestamp: new Date().toISOString(),
+                message: "Email already exists. Please choose another email",
+                timestamp: new Date().toISOString(),
             });
         }
 
