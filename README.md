@@ -1,147 +1,122 @@
 # TaskFlow CRM
 
-A modern, multi-tenant Customer Relationship Management (CRM) system built with Node.js, Express, TypeScript, and Prisma.
+A comprehensive CRM system for project management, client management, time tracking, invoicing, and real-time team collaboration.
 
-## 🚀 Features
+## 🚀 Project Structure
 
-### **Multi-Tenant Architecture**
-- Multiple organizations in one instance
-- Isolated data per organization
-- Organization switching
-- Role-based access control
+```
+TaskFlow CRM1/
+├── backend/          # Node.js/Express API with Prisma ORM
+│   ├── src/          # Source code
+│   ├── prisma/       # Database schema and migrations
+│   ├── package.json  # Backend dependencies
+│   └── README.md     # Backend setup instructions
+└── frontend/         # Next.js React application (coming soon)
+    ├── src/          # Frontend source code
+    ├── components/   # React components
+    ├── pages/        # Next.js pages
+    └── package.json  # Frontend dependencies
+```
 
-### **Authentication & Authorization**
-- JWT-based authentication
-- Email verification with OTP
-- Role-based permissions (OWNER, ADMIN, MANAGER, MEMBER, CLIENT)
-- Secure invitation system
+## 🎯 Features
 
-### **Core CRM Features**
-- Project management
-- Task tracking and assignment
-- Client management
-- Team collaboration
-- Real-time notifications
+### ✅ Completed (Backend)
+- **Authentication & Authorization** - JWT-based with role management
+- **Project Management** - Full CRUD with team collaboration
+- **Task Management** - Kanban-style with dependencies and labels
+- **Client & Contact Management** - Comprehensive client database
+- **Time Tracking** - Manual and timer-based time entry
+- **Invoicing & Billing** - Automated invoice generation with payment tracking
+- **Real-time Chat System** - Channel-based messaging with Socket.io
+- **File Management** - Document upload and organization
+- **Team Collaboration** - Role-based permissions and notifications
 
-### **Enterprise Features**
-- Multi-organization support
-- Scalable architecture
-- RESTful API
-- Comprehensive logging
+### 🚧 In Progress
+- **Frontend Development** - Modern React/Next.js interface
+- **Advanced Socket.io Features** - Real-time notifications and presence
+- **Mobile Responsiveness** - Cross-device compatibility
 
-## 🛠️ Tech Stack
+## 🛠️ Technology Stack
 
-- **Backend**: Node.js, Express.js, TypeScript
+### Backend
+- **Runtime**: Node.js with TypeScript
+- **Framework**: Express.js
 - **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: JWT, bcryptjs
+- **Authentication**: JWT with bcrypt
+- **Real-time**: Socket.io
+- **Validation**: Zod schemas
+- **File Storage**: Cloudinary
 - **Email**: SendGrid
-- **Validation**: Zod
-- **Security**: Helmet, CORS, Rate limiting
 
-## 📋 Prerequisites
-
-- Node.js (v18+)
-- PostgreSQL
-- SendGrid account (for email)
+### Frontend (Planned)
+- **Framework**: Next.js 14 with TypeScript
+- **Styling**: Tailwind CSS
+- **Components**: Shadcn/ui
+- **State Management**: React Query
+- **Real-time**: Socket.io Client
 
 ## 🚀 Quick Start
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/taskflow-crm.git
-   cd taskflow-crm
-   ```
+### Backend Setup
+```bash
+cd backend
+npm install
+cp env.example .env
+# Configure your environment variables
+npm run prisma:migrate
+npm run dev
+```
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Environment setup**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your database and SendGrid credentials
-   ```
-
-4. **Database setup**
-   ```bash
-   npx prisma migrate dev
-   npx prisma generate
-   ```
-
-5. **Start development server**
-   ```bash
-   npm run dev
-   ```
+### Frontend Setup (Coming Soon)
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
 ## 📚 API Documentation
 
-### **Authentication**
-- `POST /api/auth/signup` - User registration
-- `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
-- `POST /api/auth/verify-otp` - Email verification
+The backend provides a comprehensive REST API with the following endpoints:
 
-### **Organizations**
-- `POST /api/invitations/invite` - Send invitation
-- `POST /api/invitations/accept` - Accept invitation
-- `GET /api/invitations` - List invitations
+- **Authentication**: `/api/auth/*`
+- **Projects**: `/api/projects/*`
+- **Tasks**: `/api/tasks/*`
+- **Clients**: `/api/clients/*`
+- **Time Tracking**: `/api/time-entries/*`
+- **Invoicing**: `/api/invoices/*`
+- **Chat**: `/api/channels/*`
+- **And more...**
 
-### **Projects**
-- `POST /api/projects/createProject` - Create project
-- `GET /api/projects` - List projects
-- `GET /api/projects/:id` - Get project details
-- `PUT /api/projects/update/:id` - Update project
-- `DELETE /api/projects/:id` - Delete project
+## 🔧 Development
 
-## 🏗️ Architecture
+### Prerequisites
+- Node.js 18+
+- PostgreSQL database
+- Cloudinary account (for file uploads)
+- SendGrid account (for emails)
 
-```
-src/
-├── controllers/     # Route handlers
-├── middleware/      # Authentication, validation
-├── routes/         # API routes
-├── schemas/        # Zod validation schemas
-├── services/       # Business logic
-├── types/          # TypeScript types
-└── config/         # Database configuration
-```
+### Environment Variables
+See `backend/env.example` for required environment variables.
 
-## 🔐 Security Features
+## 🏆 Project Status
 
-- JWT token authentication
-- HTTP-only cookies
-- Password hashing with bcrypt
-- Input validation with Zod
-- Rate limiting
-- CORS protection
-- Helmet security headers
+This is a **production-ready CRM system** built for learning and portfolio purposes. It demonstrates:
 
-## 🌟 Multi-Tenancy
+- **Full-stack development** skills
+- **Modern web technologies**
+- **Database design** and optimization
+- **Real-time communication**
+- **Security best practices**
+- **Scalable architecture**
 
-TaskFlow CRM is designed for multiple organizations:
+## 📝 License
 
-- **Isolated Data**: Each organization's data is completely separate
-- **Role Management**: Different roles per organization
-- **Organization Switching**: Users can belong to multiple organizations
-- **Scalable**: Built to handle thousands of organizations
+This project is for educational and portfolio purposes.
 
-## 🤝 Contributing
+## 👨‍💻 Author
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 📞 Support
-
-For support, email support@taskflow-crm.com or create an issue in this repository.
+**Noman** - Full Stack Developer
 
 ---
 
-**Built with ❤️ for modern teams and organizations**
+*Built with ❤️ for learning and professional growth*
