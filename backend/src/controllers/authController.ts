@@ -11,8 +11,8 @@ import { sendEmail } from "@/services/emailService";
 export const doSignup = async (req: Request, res: Response) => {
     try {
     // debugging
-    console.log("Request body:", req.body);
-    console.log("Organization name:", req.body.organizationName);
+    // console.log("Request body:", req.body);
+    // console.log("Organization name:", req.body.organizationName);
      //  Validate input
 
     const { username, email, password, organizationName } = req.body;
@@ -44,13 +44,13 @@ export const doSignup = async (req: Request, res: Response) => {
 
         // Check if username already exists
         const existingUser = await prisma.user.findUnique({
-      where: { username: username },
-        });
+         where: { username: username },
+          });
         if (existingUser) {
             return res.status(409).json({
                 success: false,
-        message: "Username already exists. Please choose another name",
-        timestamp: new Date().toISOString(),
+                message: "Username already exists. Please choose another name",
+                timestamp: new Date().toISOString(),
             });
         }
 
@@ -107,8 +107,8 @@ export const doSignup = async (req: Request, res: Response) => {
 
     
         // Generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit
-    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+        const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit
+        const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
     
     //  Create User + Organization + Membership in one go
         const user = await prisma.user.create({

@@ -38,7 +38,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://127.0.0.1:5500'],
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173/'],
     credentials: true
   }
 });

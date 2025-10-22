@@ -6,13 +6,25 @@ import { z } from 'zod';
 export const userSchema = z.object({
   username: z.string().min(4, "Username must be at least 4 characters"),
   email: z.string().email("Invalid email format"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .regex(
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+    "Password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character"
+  ),
   organizationName: z.string().min(3, "Organization name must be at least 3 characters"),
 });
 
 export const loginSchema = z.object({
   email: z.string().email('Invalid email format'),
-  password: z.string().min(1, 'Password is required')
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+      "Password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character"
+    ),
 });
 
 
