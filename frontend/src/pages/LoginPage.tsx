@@ -1,9 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
+import {  z } from "zod";
 import { useAppDispatch, useAppSelector } from "../hooks/storeHook";
 import { doLogin } from "../store/features/authSlice";
 import { useNavigate } from "react-router-dom";
+import { doForgotPassword } from "../store/features/authSlice";
 
 export const loginSchema = z.object({
   email: z.string().email("Invalid email format"),
@@ -16,7 +17,8 @@ export const loginSchema = z.object({
     ),
 });
 
-type SignUpFormValues = z.infer<typeof loginSchema>;
+type LoginFormValues = z.infer<typeof loginSchema>;
+
 
 const LoginPage = () => {
   const { error } = useAppSelector((state) => state.auth);
@@ -26,12 +28,14 @@ const LoginPage = () => {
   const {
     register,
     handleSubmit,
+    getValues,
+    // watch,
     formState: { errors, isSubmitting },
-  } = useForm<SignUpFormValues>({
+  } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async (data: SignUpFormValues) => {
+  const onSubmit = async (data: LoginFormValues) => {
     try {
       console.log("data in login", data);
       const result = await dispatch(doLogin(data)).unwrap();
@@ -43,6 +47,20 @@ const LoginPage = () => {
       console.error("login error ", error.message);
     }
   };
+
+
+  // handle forgot password
+   const  handleForgotPassword =async ()=>{
+       try {
+        const email = getValues("email")
+         const result = await dispatch(doForgotPassword({email})).unwrap();
+         console.log("result of forgot password action" , result)
+
+       } catch (error:any) {
+         console.error("login error ", error.message);
+       }
+   }
+
 
   return (
     <div className="min-h-screen flex justify-center items-center bg-gray-900 px-4">
@@ -132,7 +150,7 @@ const LoginPage = () => {
 
         {/* Footer links */}
         <div className="flex justify-between text-xs text-gray-400 mt-4">
-          <button type="button" className="hover:text-teal-400">
+          <button type="button" onClick={handleForgotPassword} className="hover:text-teal-400">
             Forgot Password?
           </button>
           <button
@@ -146,6 +164,6 @@ const LoginPage = () => {
       </form>
     </div>
   );
-};
+}
 
 export default LoginPage;

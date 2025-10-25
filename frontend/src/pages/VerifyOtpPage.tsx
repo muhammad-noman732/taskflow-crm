@@ -116,8 +116,9 @@ const VerifyOtpPage = () => {
           {otp.map((digit, index) => (
           <input
            key={index}
-           ref ={(el) => (inputRefs.current[index] = el)}
+           ref ={(el) => {inputRefs.current[index] = el}}
            type="text"
+           title="otp input"
            maxLength={1}
            value={digit}
            onChange={(e) => handleOtpChange(e.target.value, index)}

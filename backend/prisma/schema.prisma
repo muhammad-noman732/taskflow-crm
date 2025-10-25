@@ -73,6 +73,8 @@ model User {
   isVerified    Boolean                  @default(false)
   otpCode       String?
   otpExpiry     DateTime?
+  resetLink     String?                  
+  resetLinkExpiry DateTime?              
   isSuperAdmin  Boolean                  @default(false)
 
   // relations

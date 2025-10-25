@@ -28,7 +28,8 @@ import paymentRoutes from './routes/paymentRoutes';
 import channelRoutes from './routes/channelRoutes';
 import channelMemberRoutes from './routes/channelMemberRoutes';
 import messageRoutes from './routes/messageRoutes';
-import { Socket } from 'dgram';
+import { Socket } from 'socket.io';
+import userRouter from './routes/userRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -126,6 +127,7 @@ app.get('/', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/user' , userRouter)
 app.use('/api/invitations', invitationRoutes);
 app.use('/api/projects', projectRouter);
 app.use('/api/clients', clientRoutes);

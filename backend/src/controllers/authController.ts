@@ -5,135 +5,136 @@ import bcrypt from "bcryptjs";
 import { userSchema } from "@/schemas";
 import jwt from 'jsonwebtoken'
 import { sendEmail } from "@/services/emailService";
-
+import crypto from 'crypto'
+import { timeStamp } from "console";
 
 
 export const doSignup = async (req: Request, res: Response) => {
-    try {
+  try {
     // debugging
     // console.log("Request body:", req.body);
     // console.log("Organization name:", req.body.organizationName);
-     //  Validate input
+    //  Validate input
 
     const { username, email, password, organizationName } = req.body;
 
-        // Validation - check required fields
-        if (!username) {
-            return res.status(400).json({
-                success: false,
-                message: "Username is required",
-               timestamp: new Date().toISOString(),
-            });
-        }
+    // Validation - check required fields
+    if (!username) {
+      return res.status(400).json({
+        success: false,
+        message: "Username is required",
+        timestamp: new Date().toISOString(),
+      });
+    }
 
-        if (!email) {
-            return res.status(400).json({
-                success: false,
-                message: "Email is required",
-                 timestamp: new Date().toISOString(),
-            });
-        }
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+        timestamp: new Date().toISOString(),
+      });
+    }
 
-        if (!organizationName) {
-            return res.status(400).json({
-                success: false,
-                message: "Organization name is required",
-                  timestamp: new Date().toISOString(),
-            });
-        }
+    if (!organizationName) {
+      return res.status(400).json({
+        success: false,
+        message: "Organization name is required",
+        timestamp: new Date().toISOString(),
+      });
+    }
 
-        // Check if username already exists
-        const existingUser = await prisma.user.findUnique({
-         where: { username: username },
-          });
-        if (existingUser) {
-            return res.status(409).json({
-                success: false,
-                message: "Username already exists. Please choose another name",
-                timestamp: new Date().toISOString(),
-            });
-        }
+    // Check if username already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { username: username },
+    });
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: "Username already exists. Please choose another name",
+        timestamp: new Date().toISOString(),
+      });
+    }
 
-        // Check if email already exists
-        const existingEmail = await prisma.user.findUnique({
-           where: { email: email },
-          });
-        if (existingEmail) {
-            return res.status(409).json({
-                success: false,
-                message: "Email already exists. Please choose another email",
-                timestamp: new Date().toISOString(),
-            });
-        }
+    // Check if email already exists
+    const existingEmail = await prisma.user.findUnique({
+      where: { email: email },
+    });
+    if (existingEmail) {
+      return res.status(409).json({
+        success: false,
+        message: "Email already exists. Please choose another email",
+        timestamp: new Date().toISOString(),
+      });
+    }
 
-        // Generate slug from organization name
-        const generateSlug = (name: string): string => {
-            return name
-                .toLowerCase()
-                .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
-                .replace(/\s+/g, '-') // Replace spaces with hyphens
-                .replace(/-+/g, '-') // Replace multiple hyphens with single
-                .trim();
-        };
+    // Generate slug from organization name
+    const generateSlug = (name: string): string => {
+      return name
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+        .replace(/\s+/g, '-') // Replace spaces with hyphens
+        .replace(/-+/g, '-') // Replace multiple hyphens with single
+        .trim();
+    };
 
-        const orgSlug = generateSlug(organizationName);
+    const orgSlug = generateSlug(organizationName);
 
-        // Check if organization name already exists
-        const existingOrg = await prisma.organization.findUnique({
-            where: { name: organizationName },
-        });
-        if (existingOrg) {
-            return res.status(409).json({
-                success: false,
-                message: "Organization already exists. Please choose another name",
-                timestamp: new Date().toISOString(),
-            });
-        }
+    // Check if organization name already exists
+    const existingOrg = await prisma.organization.findUnique({
+      where: { name: organizationName },
+    });
+    if (existingOrg) {
+      return res.status(409).json({
+        success: false,
+        message: "Organization already exists. Please choose another name",
+        timestamp: new Date().toISOString(),
+      });
+    }
 
-        // Check if organization slug already exists
-        const existingSlug = await prisma.organization.findUnique({
-            where: { slug: orgSlug },
-        });
-        if (existingSlug) {
-            return res.status(409).json({
-                success: false,
-                message: "Organization slug already exists. Please choose another name",
-                timestamp: new Date().toISOString(),
-            });
-        }
+    // Check if organization slug already exists
+    const existingSlug = await prisma.organization.findUnique({
+      where: { slug: orgSlug },
+    });
+    if (existingSlug) {
+      return res.status(409).json({
+        success: false,
+        message: "Organization slug already exists. Please choose another name",
+        timestamp: new Date().toISOString(),
+      });
+    }
 
-        // Hash the password
-        const hashPassword = await bcrypt.hash(password, 10);
+    // Hash the password
+    const hashPassword = await bcrypt.hash(password, 10);
 
-    
-        // Generate OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit
-        const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
-    
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6 digit
+    const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+
     //  Create User + Organization + Membership in one go
-        const user = await prisma.user.create({
-             data: {
-                username,
-                email,
-                password: hashPassword,
-                otpCode: otp,
-                otpExpiry,
-                memberships: {
-                    create: {
-                        role: "OWNER",
-                        organization: {
-                        create: {
-                        name: organizationName,
-                        slug: orgSlug,
-                        // NEW PRICING DEFAULTS
-                        defaultHourlyRate: 50.00,
-                        currency: "USD",
-                        taxRate: 0.00,
-                              },
-                        },
-                    },
-                },
-             },
+    const user = await prisma.user.create({
+      data: {
+        username,
+        email,
+        password: hashPassword,
+        otpCode: otp,
+        otpExpiry,
+        memberships: {
+          create: {
+            role: "OWNER",
+            organization: {
+              create: {
+                name: organizationName,
+                slug: orgSlug,
+                // NEW PRICING DEFAULTS
+                defaultHourlyRate: 50.00,
+                currency: "USD",
+                taxRate: 0.00,
+              },
+            },
+          },
+        },
+      },
       include: {
         memberships: {
           include: {
@@ -143,7 +144,7 @@ export const doSignup = async (req: Request, res: Response) => {
       },
     });
 
-     // Send OTP email
+    // Send OTP email
     await sendEmail(
       email,
       "Verify your account",
@@ -152,8 +153,8 @@ export const doSignup = async (req: Request, res: Response) => {
 
     // Generate JWT token for immediate access (production ready)
     const token = jwt.sign(
-      { 
-        userId: user.id, 
+      {
+        userId: user.id,
         email: user.email,
         username: user.username,
         role: "OWNER"
@@ -174,11 +175,11 @@ export const doSignup = async (req: Request, res: Response) => {
     // Remove sensitive data from response
     const { password: _, otpCode: __, otpExpiry: ___, ...userWithoutSensitiveData } = user;
 
-        return res.status(201).json({
-            success: true,
-            message: "User created successfully, please verify OTP to complete signup",
-            data: userWithoutSensitiveData,
-             timestamp: new Date().toISOString(),
+    return res.status(201).json({
+      success: true,
+      message: "User created successfully, please verify OTP to complete signup",
+      data: userWithoutSensitiveData,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error("Signup error:", error);
@@ -193,7 +194,7 @@ export const doSignup = async (req: Request, res: Response) => {
 export const doLogin = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
-    
+
     // Find the user with their memberships and organizations
     const findUser = await prisma.user.findUnique({
       where: {
@@ -205,10 +206,10 @@ export const doLogin = async (req: Request, res: Response) => {
             organization: true,
           },
         },
-      
+
       },
     });
-    
+
     // If user not found, return 404 error
     if (!findUser) {
       return res.status(404).json({
@@ -229,7 +230,7 @@ export const doLogin = async (req: Request, res: Response) => {
 
     // Compare the password
     const comparePassword = await bcrypt.compare(password, findUser.password);
-    
+
     // If password doesn't match
     if (!comparePassword) {
       return res.status(401).json({
@@ -246,14 +247,14 @@ export const doLogin = async (req: Request, res: Response) => {
 
     // If user found and password correct, create JWT token
     const token = jwt.sign(
-      { 
-        userId: findUser.id, 
+      {
+        userId: findUser.id,
         email: findUser.email,
         username: findUser.username,
         role: primaryRole,
         organizationId: currentOrganizationId
       },
-      process.env.JWT_SECRET || 'your-secret-key', 
+      process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' } // Token expires in 7 days
     );
 
@@ -350,8 +351,8 @@ export const verifyOtp = async (req: Request, res: Response) => {
 
     // Generate new JWT token with verified status
     const token = jwt.sign(
-      { 
-        userId: updatedUser.id, 
+      {
+        userId: updatedUser.id,
         email: updatedUser.email,
         username: updatedUser.username,
         role: "OWNER"
@@ -402,15 +403,140 @@ export const doLogout = async (req: Request, res: Response) => {
     return res.status(200).json({
       success: true,
       message: "Logout successful",
-            timestamp: new Date().toISOString()
-        });
+      timestamp: new Date().toISOString()
+    });
 
-    } catch (error) {
+  } catch (error) {
     console.error('Logout error:', error);
-        return res.status(500).json({
-            success: false,
+    return res.status(500).json({
+      success: false,
       message: "Internal server error during logout",
-            timestamp: new Date().toISOString()
-        });
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+
+// forgot password 
+export const forgotPassword = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body; // Fixed: removed parentheses
+    
+    if (!email) {
+      return res.status(400).json({
+        message: "Email is required field",
+        success: false,
+        timestamp: new Date().toISOString()
+      });
     }
+
+    const user = await prisma.user.findUnique({
+      where: { email: email }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found with this email",
+        success: false,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Generate reset token and expiry
+    const emailToken = crypto.randomBytes(32).toString("hex");
+    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Update user with reset token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetLink: emailToken,
+        resetLinkExpiry: expiry
+      }
+    });
+
+    // Send reset email
+    const resetLink = `http://localhost:5173/reset-password?token=${emailToken}`;
+    
+    await sendEmail(
+      user.email,
+      "Password Reset Request",
+      `<p>Click here to reset your password: <a href="${resetLink}">${resetLink}</a></p><p>This link will expire in 10 minutes.</p>`
+    );
+
+    return res.status(200).json({
+      message: "Reset link sent successfully",
+      success: true, 
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error: any) {
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : "Internal server error",
+      success: false,
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+
+// reset password 
+
+
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { newPassword, confirmNewPassword, token } = req.body; 
+
+    if (newPassword !== confirmNewPassword) {
+      return res.status(400).json({
+        message: "Passwords do not match",
+        success: false,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Find user with valid reset token
+    const user = await prisma.user.findFirst({
+      where: {
+        resetLink: token, 
+        resetLinkExpiry: {
+          gt: new Date() 
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        message: "Invalid or expired reset token",
+        success: false,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10); 
+
+    // Update user password and clear reset fields
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetLink: null,
+        resetLinkExpiry: null
+      }
+    });
+
+    return res.status(200).json({
+      message: "Password reset successfully",
+      success: true,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error: any) {
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : "Internal server error",
+      success: false,
+      timestamp: new Date().toISOString()
+    });
+  }
 };

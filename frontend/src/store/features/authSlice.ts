@@ -12,7 +12,7 @@ interface User {
       id: string;
       name: string;
       slug: string;
-      
+
     };
   }>;
 }
@@ -41,7 +41,15 @@ interface VerifyOtpData {
   email: string;
   otp: string;
 }
+interface ForgotPasswordData {
+  email: string
+}
 
+interface ResetPasswordData {
+  token: string,
+  newPassword: string,
+  confirmNewPassword: string
+}
 // Generic API Response type
 interface ApiResponse<T = any> {
   success: boolean;
@@ -64,7 +72,7 @@ const API_BASE_URL = "http://localhost:3000/api/auth";
 
 // ------------------- AsyncThunks -------------------
 
-// 🎯 SIGNUP: Backend returns ApiResponse<User> (direct User object)
+//  SIGNUP: Backend returns ApiResponse<User> (direct User object)
 export const doSignup = createAsyncThunk<
   ApiResponse<User>,  // ← Return type: data contains User directly
   SignupData,         // ← Argument type
@@ -95,7 +103,7 @@ export const doSignup = createAsyncThunk<
   }
 );
 
-// 🎯 LOGIN: Backend returns ApiResponse<{user: User}> (wrapped in user object)
+//  LOGIN: Backend returns ApiResponse<{user: User}> (wrapped in user object)
 export const doLogin = createAsyncThunk<
   ApiResponse<{ user: User }>,  // ← Return type: data contains {user: User}
   LoginData,                   // ← Argument type
@@ -128,8 +136,8 @@ export const doLogin = createAsyncThunk<
 
 //  VERIFY OTP: Backend returns ApiResponse<User> (direct User object)
 export const verifyOtp = createAsyncThunk<
-  ApiResponse<User>,  // ← Return type: data contains User directly
-  VerifyOtpData,      // ← Argument type
+  ApiResponse<User>,  // Return type: data contains User directly
+  VerifyOtpData,      //  Argument type
   { rejectValue: string }
 >(
   "auth/verifyOtp",
@@ -157,10 +165,10 @@ export const verifyOtp = createAsyncThunk<
   }
 );
 
-// 🎯 LOGOUT: Backend returns ApiResponse (no data)
+//  LOGOUT: Backend returns ApiResponse (no data)
 export const doLogout = createAsyncThunk<
-  ApiResponse,  // ← Return type: no data field needed
-  void,         // ← No arguments
+  ApiResponse,  // Return type: no data field needed
+  void,         //  No arguments
   { rejectValue: string }
 >(
   "auth/doLogout",
@@ -184,15 +192,78 @@ export const doLogout = createAsyncThunk<
   }
 );
 
+
+export const doForgotPassword = createAsyncThunk<
+  ApiResponse,
+  ForgotPasswordData,
+  { rejectValue: string }
+>(
+  'auth/doForgotPassword',
+  async (data, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/forgot-password`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      const responseData: ApiResponse = await response.json();
+
+      if (!response.ok) {
+        return rejectWithValue(responseData.message || "Forgot password failed");
+      }
+
+      return responseData;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Forgot password failed");
+    }
+  }
+);
+
+// reset password
+
+export const doResetPassword = createAsyncThunk<
+  ApiResponse,
+  ResetPasswordData,
+  { rejectValue: string }
+>(
+  "auth/doResetPassword",
+  async (data, { rejectWithValue }) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/reset-password`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      const responseData: ApiResponse = await response.json();
+
+      if (!response.ok) {
+        return rejectWithValue(responseData.message || "Reset password failed");
+      }
+
+      return responseData;
+    } catch (error: any) {
+      return rejectWithValue(error.message || "Reset password failed");
+    }
+  }
+);
+
 // ------------------- Slice -------------------
 const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-    clearError: (state:AuthState) => {
+    clearError: (state: AuthState) => {
       state.error = null;
     },
-    resetAuth: (state:AuthState) => {
+    resetAuth: (state: AuthState) => {
       state.user = null;
       state.isAuthenticated = false;
       state.needsVerification = false;
@@ -203,11 +274,11 @@ const authSlice = createSlice({
   extraReducers: (builder) => {
     builder
       //  SIGNUP CASES
-      .addCase(doSignup.pending, (state:AuthState) => {
+      .addCase(doSignup.pending, (state: AuthState) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(doSignup.fulfilled, (state:AuthState, action:PayloadAction<string>) => {
+      .addCase(doSignup.fulfilled, (state: AuthState, action) => {
         state.loading = false;
         //  action.payload.data is User directly
         state.user = action.payload.data || null;
@@ -215,65 +286,94 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.error = null;
       })
-      .addCase(doSignup.rejected, (state:AuthState, action:PayloadAction<string>) => {
+      .addCase(doSignup.rejected, (state: AuthState, action) => {
         state.loading = false;
         state.isAuthenticated = false;
         state.needsVerification = false;
         state.error = action.payload || "Signup failed";
       })
-      
+
       //  LOGIN CASES
-      .addCase(doLogin.pending, (state:AuthState) => {
+      .addCase(doLogin.pending, (state: AuthState) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(doLogin.fulfilled, (state:AuthState, action:PayloadAction<string>) => {
-        console.log('data in login action' , action.payload.data)
+      .addCase(doLogin.fulfilled, (state: AuthState, action) => {
+        console.log('data in login action', action.payload)
         state.loading = false;
         state.user = action.payload.data?.user || null;
         state.isAuthenticated = true;
         state.needsVerification = false;
         state.error = null;
       })
-      .addCase(doLogin.rejected, (state:AuthState, action:PayloadAction<string>) => {
+      .addCase(doLogin.rejected, (state: AuthState, action) => {
         state.loading = false;
         state.isAuthenticated = false;
         state.user = null;
         state.error = action.payload || "Login failed";
       })
-      
+
       //  VERIFY OTP CASES
-      .addCase(verifyOtp.pending, (state:AuthState) => {
+      .addCase(verifyOtp.pending, (state: AuthState) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(verifyOtp.fulfilled, (state:AuthState, action:PayloadAction<string>) => {
+      .addCase(verifyOtp.fulfilled, (state: AuthState, action) => {
         state.loading = false;
-        console.log("data in verify otp action" , action.payload)
+        console.log("data in verify otp action", action.payload)
         state.user = action.payload.data || null;
         state.isAuthenticated = true;
         state.needsVerification = false;
         state.error = null;
       })
-      .addCase(verifyOtp.rejected, (state:AuthState, action:PayloadAction<string>) => {
+      .addCase(verifyOtp.rejected, (state: AuthState, action) => {
         state.loading = false;
         state.error = action.payload || "OTP verification failed";
       })
-      
+
       //  LOGOUT CASES
-      .addCase(doLogout.pending, (state:AuthState) => {
+      .addCase(doLogout.pending, (state: AuthState) => {
         state.loading = true;
       })
-      .addCase(doLogout.fulfilled, (state:AuthState) => {
+      .addCase(doLogout.fulfilled, (state: AuthState) => {
         state.loading = false;
         state.user = null;
         state.isAuthenticated = false;
         state.needsVerification = false;
         state.error = null;
       })
-      .addCase(doLogout.rejected, (state:AuthState, action:PayloadAction<string>) => {
+      .addCase(doLogout.rejected, (state: AuthState, action) => {
         state.loading = false;
         state.error = action.payload || "Logout failed";
+      })
+      // FORGOT PASSWORD CASES
+      .addCase(doForgotPassword.pending, (state: AuthState) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(doForgotPassword.fulfilled, (state: AuthState) => {
+        state.loading = false;
+        state.error = null;
+        // No user state changes needed for forgot password
+      })
+      .addCase(doForgotPassword.rejected, (state: AuthState, action) => {
+        state.loading = false;
+        state.error = action.payload || "Forgot password failed";
+      })
+
+      // RESET PASSWORD CASES
+      .addCase(doResetPassword.pending, (state: AuthState) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(doResetPassword.fulfilled, (state: AuthState) => {
+        state.loading = false;
+        state.error = null;
+        // No user state changes needed for reset password
+      })
+      .addCase(doResetPassword.rejected, (state: AuthState, action) => {
+        state.loading = false;
+        state.error = action.payload || "Reset password failed";
       });
   },
 });

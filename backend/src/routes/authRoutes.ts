@@ -1,5 +1,5 @@
 import express from "express";
-import { doSignup, doLogin, doLogout, verifyOtp } from "@/controllers/authController";
+import { doSignup, doLogin, doLogout, verifyOtp, forgotPassword, resetPassword } from "@/controllers/authController";
 import { validateRequest } from "@/middleware/validation";
 import { userSchema, loginSchema, verifyOtpSchema } from "@/schemas";
 
@@ -16,5 +16,7 @@ authRouter.post("/verify-otp", validateRequest(verifyOtpSchema), verifyOtp);
 
 // POST /auth/logout
 authRouter.post("/logout", doLogout);
+authRouter.post("/forgot-password", forgotPassword);
+authRouter.post("/reset-password", resetPassword);
 
 export default authRouter;
